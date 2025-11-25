@@ -6,60 +6,32 @@ import AuthScreen from './components/AuthScreen';
 import ChatListScreen from './components/ChatListScreen';
 import ChatScreen from './components/ChatScreen';
 import ProfileScreen from './components/ProfileScreen';
-import SettingsScreen from './components/SettingsScreen';
-import EmailVerificationBanner from './components/EmailVerificationBanner';
 import AdminPanel from './components/AdminPanel';
-import DraggableAdminPanel from './components/DraggableAdminPanel';
-import HiddenAdminScreen from './components/HiddenAdminScreen';
-import SwitchAccountScreen from './components/SwitchAccountScreen';
-import ViewProfileScreen from './components/ViewProfileScreen';
 import KubraNisaBotService from './lib/kubraNisaBotService';
 import { Loader2, User, LogOut, Wrench, X } from 'lucide-react';
 import { Button } from './components/ui';
-import { useVoiceCall } from './hooks/useVoiceCall';
-import IncomingCallModal from './components/IncomingCallModal';
-import ActiveCallScreen from './components/ActiveCallScreen';
-import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [chat, setChat] = useState(null);
     const [showProfile, setShowProfile] = useState(false);
-    const [showSettings, setShowSettings] = useState(false);
     const [showAdminPanel, setShowAdminPanel] = useState(false);
-    const [showHiddenAdmin, setShowHiddenAdmin] = useState(false);
-    const [showSwitchAccount, setShowSwitchAccount] = useState(false);
-    const [viewProfileUserId, setViewProfileUserId] = useState(null);
-    const [versionClickCount, setVersionClickCount] = useState(0);
     const botServiceRef = useRef(null);
+
+    const auth = getFirebaseAuth();
+    const db = getFirebaseDb();
 
     useEffect(() => {
         console.log('App.jsx: useEffect started');
-
-        let auth;
-        let db;
-        
-        try {
-            auth = getFirebaseAuth();
-            db = getFirebaseDb();
-            console.log('App.jsx: Firebase instances obtained');
-        } catch (error) {
-            console.error('App.jsx: Failed to get Firebase instances:', error);
-            // Continue anyway - user might be able to use app offline
-            setLoading(false);
-            return;
-        }
 
         // Safety timeout for offline scenarios
         const safetyTimeout = setTimeout(() => {
             console.warn('App.jsx: Firebase timeout - continuing anyway');
             setLoading(false);
-        }, 5000); // Increased to 5 seconds
+        }, 3000);
 
-        let unsubscribe;
-        try {
-            unsubscribe = onAuthStateChanged(auth, async (user) => {
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
             clearTimeout(safetyTimeout);
             console.log('App.jsx: Auth state changed', { user: user?.email || 'null' });
 
@@ -90,37 +62,21 @@ function App() {
                         console.log('App.jsx: User set to ONLINE');
                     }
 
-                    // Request native permissions
-                    import('./lib/permissions').then(({ requestAllPermissions }) => {
-                        requestAllPermissions().catch(err => console.error('Permission request failed:', err));
-                    });
-
-                    // Initialize push notifications
-                    import('./lib/pushNotificationService').then(({ initializePushNotifications }) => {
-                        initializePushNotifications().catch(err => console.error('Push notification init failed:', err));
-                    });
-
                     // Initialize Kübra Nisa AI Bot
                     if (!botServiceRef.current) {
                         console.log('App.jsx: Starting Kübra Nisa AI Bot...');
                         botServiceRef.current = new KubraNisaBotService(user.uid);
                         botServiceRef.current.start();
                         botServiceRef.current.scheduleRandomMessages();
-                        
-                        // Start Kübra location updates (Texas)
-                        import('./lib/kubraLocationService').then(({ startKubraLocationUpdates }) => {
-                            startKubraLocationUpdates();
-                        });
                     }
 
-                    // Set user offline when window closes or loses focus
+                    // Set user offline when window closes
                     window.addEventListener('beforeunload', async () => {
                         await setDoc(doc(db, 'users', user.uid), {
                             isOnline: false,
                             lastSeen: serverTimestamp()
                         }, { merge: true });
 
-                        // Stop bot
                         if (botServiceRef.current) {
                             botServiceRef.current.stop();
                         }
@@ -132,67 +88,24 @@ function App() {
                 console.log('App.jsx: Ready');
             } catch (error) {
                 console.error('App.jsx: Error:', error);
-                // Still set user even if profile sync fails
                 setUser(user);
                 setLoading(false);
             }
-            }, (error) => {
-                console.error('App.jsx: Auth state change error:', error);
-                // Don't block the app - allow it to continue
-                setLoading(false);
-            });
-        } catch (error) {
-            console.error('App.jsx: Error setting up auth listener:', error);
-            setLoading(false);
-        }
+        });
 
         return () => {
             clearTimeout(safetyTimeout);
-            if (unsubscribe) {
-                unsubscribe();
-            }
+            unsubscribe();
         };
     }, []);
 
-    // Voice Call Hook - Safely get db instance
-    let dbForCall;
-    try {
-        dbForCall = getFirebaseDb();
-    } catch (error) {
-        console.warn('Firebase DB not available for voice calls:', error);
-        dbForCall = null;
-    }
-    
-    const {
-        callState,
-        currentCall,
-        remoteUser,
-        isMuted,
-        isVideoEnabled,
-        connectionState,
-        localStream,
-        remoteStream,
-        startCall,
-        acceptCall,
-        rejectCall,
-        endCall,
-        toggleMute,
-        toggleVideo
-    } = useVoiceCall(dbForCall, user);
-
     const handleLogout = async () => {
         try {
-    // Firebase instances - will be obtained safely in useEffect
-            
             if (user) {
-                try {
-                    await setDoc(doc(db, 'users', user.uid), {
-                        isOnline: false,
-                        lastSeen: serverTimestamp()
-                    }, { merge: true });
-                } catch (dbError) {
-                    console.warn('Failed to update user status on logout:', dbError);
-                }
+                await setDoc(doc(db, 'users', user.uid), {
+                    isOnline: false,
+                    lastSeen: serverTimestamp()
+                }, { merge: true });
             }
             await signOut(auth);
             setUser(null);
@@ -228,9 +141,6 @@ function App() {
                         user={user}
                         chat={chat}
                         onBack={() => setChat(null)}
-                        onCallStart={() => startCall(chat.id, false)}
-                        onVideoCallStart={() => startCall(chat.id, true)}
-                        onViewProfile={(userId) => setViewProfileUserId(userId)}
                     />
                 ) : (
                     <>
@@ -259,30 +169,37 @@ function App() {
                             user={user}
                             onSelectChat={setChat}
                             onShowProfile={() => setShowProfile(true)}
-                            onShowSettings={() => setShowSettings(true)}
-                            onShowSwitchAccount={() => setShowSwitchAccount(true)}
-                            onViewProfile={(userId) => setViewProfileUserId(userId)}
                         />
 
-                        {/* Admin Panel Toggle - Only for specific email */}
-                        {user?.email === 'senerkadiralper@gmail.com' && (
-                            <div className="fixed bottom-4 left-4 z-50">
-                                <Button
-                                    onClick={() => setShowAdminPanel(!showAdminPanel)}
-                                    className="bg-red-600 hover:bg-red-700 text-white shadow-lg rounded-full px-4 py-2 flex items-center gap-2"
-                                >
-                                    <Wrench size={16} />
-                                    Admin
-                                </Button>
-                            </div>
-                        )}
+                        {/* Admin Panel Toggle */}
+                        <div className="fixed bottom-4 left-4 z-50">
+                            <Button
+                                onClick={() => setShowAdminPanel(!showAdminPanel)}
+                                className="bg-red-600 hover:bg-red-700 text-white shadow-lg rounded-full px-4 py-2 flex items-center gap-2"
+                            >
+                                <Wrench size={16} />
+                                Admin
+                            </Button>
+                        </div>
 
-                        {/* Admin Panel Modal - Draggable */}
-                        {showAdminPanel && user?.email === 'senerkadiralper@gmail.com' && (
-                            <DraggableAdminPanel
-                                onClose={() => setShowAdminPanel(false)}
-                                currentUser={user}
-                            />
+                        {/* Admin Panel Modal */}
+                        {showAdminPanel && (
+                            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+                                <div className="bg-dark-surface rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden shadow-2xl border border-dark-border flex flex-col">
+                                    <div className="p-4 border-b border-dark-border flex justify-between items-center bg-dark-bg/50">
+                                        <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                            <Wrench size={20} className="text-red-500" />
+                                            Admin Paneli
+                                        </h2>
+                                        <Button variant="ghost" onClick={() => setShowAdminPanel(false)}>
+                                            <X size={20} />
+                                        </Button>
+                                    </div>
+                                    <div className="overflow-y-auto flex-1 p-4">
+                                        <AdminPanel />
+                                    </div>
+                                </div>
+                            </div>
                         )}
                     </>
                 )}
@@ -297,97 +214,9 @@ function App() {
                                     <X size={20} />
                                 </Button>
                             </div>
-                            <ProfileScreen user={user} onClose={() => setShowProfile(false)} onShowSettings={() => { setShowProfile(false); setShowSettings(true); }} />
+                            <ProfileScreen user={user} onBack={() => setShowProfile(false)} />
                         </div>
                     </div>
-                )}
-
-                {/* Settings Screen */}
-                {showSettings && (
-                    <div className="fixed inset-0 z-50 bg-dark-bg">
-                        <SettingsScreen
-                            user={user}
-                            onBack={() => setShowSettings(false)}
-                            onShowProfile={() => { setShowSettings(false); setShowProfile(true); }}
-                            onVersionClick={() => {
-                                setVersionClickCount(prev => {
-                                    const newCount = prev + 1;
-                                    if (newCount >= 5) {
-                                        setShowHiddenAdmin(true);
-                                        setVersionClickCount(0);
-                                    }
-                                    setTimeout(() => setVersionClickCount(0), 3000);
-                                    return newCount;
-                                });
-                            }}
-                        />
-                    </div>
-                )}
-
-                {/* Switch Account Screen */}
-                {showSwitchAccount && (
-                    <div className="fixed inset-0 z-50 bg-dark-bg">
-                        <SwitchAccountScreen
-                            onBack={() => setShowSwitchAccount(false)}
-                            onAccountSwitch={(newUser) => {
-                                setUser(newUser);
-                                setShowSwitchAccount(false);
-                            }}
-                        />
-                    </div>
-                )}
-
-                {/* View Profile Screen */}
-                {viewProfileUserId && (
-                    <div className="fixed inset-0 z-50 bg-dark-bg">
-                        <ViewProfileScreen
-                            userId={viewProfileUserId}
-                            onBack={() => setViewProfileUserId(null)}
-                            onStartChat={(chatUser) => {
-                                setChat(chatUser);
-                                setViewProfileUserId(null);
-                            }}
-                            onCall={(userId) => {
-                                startCall(userId, false);
-                                setViewProfileUserId(null);
-                            }}
-                            onVideoCall={(userId) => {
-                                startCall(userId, true);
-                                setViewProfileUserId(null);
-                            }}
-                        />
-                    </div>
-                )}
-
-                {/* Hidden Admin Screen */}
-                {showHiddenAdmin && user?.email === 'senerkadiralper@gmail.com' && (
-                    <HiddenAdminScreen
-                        user={user}
-                        onClose={() => setShowHiddenAdmin(false)}
-                    />
-                )}
-
-                {/* Voice Call Modals */}
-                {callState === 'ringing' && (
-                    <IncomingCallModal
-                        caller={remoteUser}
-                        onAccept={acceptCall}
-                        onReject={rejectCall}
-                    />
-                )}
-
-                {(callState === 'active' || callState === 'calling') && (
-                    <ActiveCallScreen
-                        caller={remoteUser}
-                        isMuted={isMuted}
-                        isVideoEnabled={isVideoEnabled}
-                        onToggleMute={toggleMute}
-                        onToggleVideo={toggleVideo}
-                        onEndCall={endCall}
-                        connectionState={connectionState}
-                        localStream={localStream}
-                        remoteStream={remoteStream}
-                    />
                 )}
             </div>
         </div>
