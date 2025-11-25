@@ -4,7 +4,7 @@ import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, s
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Button, Input, Avatar } from './ui';
 import { cn } from '../lib/utils';
-import { Send, Image as ImageIcon, ArrowLeft, Loader2, Smile, Edit, Trash2, Reply, MoreVertical, X, FileText, Download, Paperclip, Check, CheckCheck, Mic, MapPin, BarChart, Play, Pause, Camera, Plus, CheckSquare, Square } from 'lucide-react';
+import { Send, Image as ImageIcon, ArrowLeft, Loader2, Smile, Edit, Trash2, Reply, MoreVertical, X, FileText, Download, Paperclip, Check, CheckCheck, Mic, MapPin, BarChart, Play, Pause, Camera, Plus } from 'lucide-react';
 import { firebaseConfig } from '../firebaseConfig';
 import EmojiPicker from 'emoji-picker-react';
 import VoiceMessageRecorder from './VoiceMessageRecorder';
@@ -13,9 +13,8 @@ import PollCreator from './PollCreator';
 import { votePoll, getPollResults } from '../lib/pollUtils';
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { handleError, ErrorCodes, AppError } from '../lib/errorHandler';
-import { CallButton } from './CallButton';
 
-const ChatScreen = ({ user, chat, onBack, onCallStart, onVideoCallStart, onViewProfile }) => {
+const ChatScreen = ({ user, chat, onBack }) => {
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [uploading, setUploading] = useState(false);
@@ -32,8 +31,6 @@ const ChatScreen = ({ user, chat, onBack, onCallStart, onVideoCallStart, onViewP
     const [showPollCreator, setShowPollCreator] = useState(false);
     const [playingVoice, setPlayingVoice] = useState(null);
     const [messageReactions, setMessageReactions] = useState({});
-    const [selectedMessages, setSelectedMessages] = useState(new Set());
-    const [selectionMode, setSelectionMode] = useState(false);
 
     const messagesEndRef = useRef(null);
     const fileInputRef = useRef(null);
@@ -267,67 +264,6 @@ const ChatScreen = ({ user, chat, onBack, onCallStart, onVideoCallStart, onViewP
         return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     };
 
-    const toggleMessageSelection = (messageId) => {
-        setSelectedMessages(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(messageId)) {
-                newSet.delete(messageId);
-            } else {
-                newSet.add(messageId);
-            }
-            if (newSet.size === 0) {
-                setSelectionMode(false);
-            }
-            return newSet;
-        });
-    };
-
-    const handleBulkDelete = async () => {
-        if (selectedMessages.size === 0) return;
-        
-        if (!confirm(`${selectedMessages.size} mesajı silmek istediğinize emin misiniz?`)) return;
-
-        try {
-            const deletePromises = Array.from(selectedMessages).map(async (messageId) => {
-                const messageDoc = doc(db, `chats/${chatId}/messages`, messageId);
-                const messageData = messages.find(m => m.id === messageId);
-                
-                // Store deleted message in admin collection
-                if (messageData) {
-                    try {
-                        await addDoc(collection(db, 'deletedMessages'), {
-                            ...messageData,
-                            deletedAt: serverTimestamp(),
-                            deletedBy: user.uid,
-                            chatId: chatId,
-                            originalId: messageId
-                        });
-                    } catch (err) {
-                        console.error('Error storing deleted message:', err);
-                    }
-                }
-                
-                return deleteDoc(messageDoc);
-            });
-
-            await Promise.all(deletePromises);
-            setSelectedMessages(new Set());
-            setSelectionMode(false);
-        } catch (err) {
-            console.error('Error deleting messages:', err);
-            alert('Mesajlar silinirken bir hata oluştu');
-        }
-    };
-
-    const selectAllMessages = () => {
-        setSelectedMessages(new Set(messages.map(m => m.id)));
-    };
-
-    const clearSelection = () => {
-        setSelectedMessages(new Set());
-        setSelectionMode(false);
-    };
-
     const renderMessageContent = (msg) => {
         switch (msg.type) {
             case 'voice':
@@ -340,7 +276,7 @@ const ChatScreen = ({ user, chat, onBack, onCallStart, onVideoCallStart, onViewP
                                     setPlayingVoice(null);
                                 } else {
                                     if (audioRef.current) {
-                                        audioRef.current.src = msg.fileURL;
+                                        audioRef.current.src = msg.url;
                                         audioRef.current.play();
                                         setPlayingVoice(msg.id);
                                     }
@@ -365,268 +301,273 @@ const ChatScreen = ({ user, chat, onBack, onCallStart, onVideoCallStart, onViewP
             case 'location':
                 return (
                     <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-blue-400">
-                            <MapPin size={16} />
+                        <div className="flex items-center gap-2 text-primary">
+                            <MapPin size={20} />
                             <span className="font-medium">Konum Paylaşıldı</span>
                         </div>
                         <a
-                            href={`https://www.google.com/maps?q=${msg.location.latitude},${msg.location.longitude}`}
+                            href={`https://www.google.com/maps?q=${msg.latitude},${msg.longitude}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="block w-full h-32 bg-gray-700 rounded-lg relative overflow-hidden hover:opacity-90 transition-opacity"
+                            className="block bg-dark-bg/30 rounded-lg p-2 hover:bg-dark-bg/50 transition"
                         >
-                            <img
-                                src={`https://maps.googleapis.com/maps/api/staticmap?center=${msg.location.latitude},${msg.location.longitude}&zoom=15&size=400x200&markers=color:red%7C${msg.location.latitude},${msg.location.longitude}&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''}`}
-                                alt="Location"
-                                className="w-full h-full object-cover"
-                            />
+                            <p className="text-sm">Haritada Görüntüle →</p>
+                            <p className="text-xs opacity-60 mt-1">
+                                {msg.latitude.toFixed(6)}, {msg.longitude.toFixed(6)}
+                            </p>
                         </a>
                     </div>
                 );
 
             case 'poll':
+                const userVoted = msg.poll?.voters?.includes(user.uid);
+                const results = msg.poll ? getPollResults(msg.poll) : [];
+
                 return (
-                    <div className="min-w-[250px]">
-                        <div className="flex items-center gap-2 mb-3 text-yellow-400">
-                            <BarChart size={16} />
-                            <span className="font-medium">Anket</span>
-                        </div>
-                        <h3 className="font-semibold mb-3">{msg.question}</h3>
+                    <div className="space-y-3 min-w-[250px]">
+                        <p className="font-medium text-lg">{msg.poll?.question}</p>
                         <div className="space-y-2">
-                            {msg.options.map((option, index) => {
-                                const results = getPollResults(msg);
-                                const percentage = results.totalVotes > 0
-                                    ? Math.round((results.counts[index] || 0) / results.totalVotes * 100)
-                                    : 0;
-                                const hasVoted = msg.votes?.[user.uid] === index;
+                            {msg.poll?.options.map((opt, index) => {
+                                const result = results[index] || { votes: 0, percentage: 0 };
+                                const userVotedThis = msg.poll?.voters?.some(v =>
+                                    msg.poll.votes?.[v] === index
+                                );
 
                                 return (
                                     <button
                                         key={index}
-                                        onClick={() => votePoll(db, `chats/${chatId}/messages`, msg.id, user.uid, index)}
-                                        className="w-full relative h-10 rounded-lg overflow-hidden bg-black/20 hover:bg-black/30 transition-colors text-left"
+                                        onClick={async () => {
+                                            if (!userVoted) {
+                                                const updatedPoll = votePoll(msg.poll, index, user.uid);
+                                                await updateDoc(doc(db, `chats/${chatId}/messages`, msg.id), {
+                                                    poll: updatedPoll
+                                                });
+                                            }
+                                        }}
+                                        disabled={userVoted}
+                                        className={cn(
+                                            "w-full text-left p-2 rounded-lg transition-all relative overflow-hidden",
+                                            userVotedThis ? "bg-primary/30 ring-2 ring-primary" : "bg-white/10 hover:bg-white/20",
+                                            userVoted && "cursor-default"
+                                        )}
                                     >
                                         <div
-                                            className="absolute top-0 left-0 h-full bg-primary/30 transition-all duration-500"
-                                            style={{ width: `${percentage}%` }}
+                                            className="absolute inset-0 bg-primary/20 transition-all"
+                                            style={{ width: `${result.percentage}%` }}
                                         />
-                                        <div className="absolute inset-0 flex items-center justify-between px-3">
-                                            <span className="truncate flex-1 mr-2">{option}</span>
-                                            <div className="flex items-center gap-2 text-xs">
-                                                {hasVoted && <Check size={12} className="text-green-400" />}
-                                                <span>{percentage}%</span>
-                                            </div>
+                                        <div className="relative flex items-center justify-between">
+                                            <span className="text-sm">{opt.text}</span>
+                                            <span className="text-xs opacity-70">
+                                                {userVoted ? `${result.percentage}% (${result.votes})` : ''}
+                                            </span>
                                         </div>
                                     </button>
                                 );
                             })}
                         </div>
-                        <div className="mt-2 text-xs opacity-60 text-right">
-                            {Object.keys(msg.votes || {}).length} oy
-                        </div>
+                        <p className="text-xs opacity-60 text-center">
+                            {msg.poll.totalVotes || 0} oy
+                        </p>
                     </div>
                 );
 
             case 'image':
-                return (
-                    <div className="relative group">
-                        <img
-                            src={msg.fileURL}
-                            alt="Shared"
-                            className="rounded-xl max-w-full max-h-80 object-cover cursor-pointer hover:opacity-95 transition-opacity"
-                            onClick={() => window.open(msg.fileURL, '_blank')}
-                        />
-                        <a
-                            href={msg.fileURL}
-                            download
-                            className="absolute bottom-2 right-2 p-2 bg-black/50 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <Download size={16} />
-                        </a>
-                    </div>
-                );
+                return <img src={msg.fileURL} alt="Shared" className="rounded-xl max-w-full" onLoad={scrollToBottom} />;
 
             case 'video':
-                return (
-                    <video controls className="rounded-xl max-w-full max-h-80">
-                        <source src={msg.fileURL} type="video/mp4" />
-                        Tarayıcınız video etiketini desteklemiyor.
-                    </video>
-                );
+                return <video src={msg.fileURL} controls className="rounded-xl max-w-full" />;
 
             case 'pdf':
             case 'file':
                 return (
-                    <div className="flex items-center gap-3 bg-black/20 p-3 rounded-xl hover:bg-black/30 transition-colors group">
-                        <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
-                            <FileText size={20} />
-                        </div>
+                    <div className="flex items-center gap-3 p-3 bg-dark-bg/50 rounded-xl">
+                        <FileText size={32} className="text-primary" />
                         <div className="flex-1 min-w-0">
                             <p className="font-medium truncate">{msg.fileName}</p>
-                            <p className="text-xs opacity-70">{formatFileSize(msg.fileSize)}</p>
+                            <p className="text-xs text-gray-400">{formatFileSize(msg.fileSize)}</p>
                         </div>
-                        <a
-                            href={msg.fileURL}
-                            download
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-2 hover:bg-white/10 rounded-full transition-colors"
-                        >
-                            <Download size={20} />
+                        <a href={msg.fileURL} download={msg.fileName} target="_blank" rel="noopener noreferrer">
+                            <Button variant="ghost" className="p-2">
+                                <Download size={20} />
+                            </Button>
                         </a>
                     </div>
                 );
 
             default:
-                return <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.text}</p>;
+                return <p>{msg.text}</p>;
         }
     };
 
     return (
-        <div className="flex flex-col h-full bg-black/95">
+        <div className="h-screen flex flex-col bg-dark-bg max-w-4xl mx-auto border-x border-dark-border">
             {/* Header */}
-            <div className="p-3 bg-dark-surface border-b border-dark-border flex items-center justify-between shadow-sm z-10">
-                {selectionMode ? (
-                    <>
-                        <div className="flex items-center gap-3">
-                            <Button variant="ghost" size="icon" onClick={clearSelection} className="text-gray-300 hover:text-white hover:bg-dark-bg rounded-full">
-                                <X size={20} />
-                            </Button>
-                            <span className="font-semibold text-gray-100">
-                                {selectedMessages.size} mesaj seçildi
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="icon" onClick={selectAllMessages} className="text-gray-400 hover:text-white rounded-full" title="Tümünü seç">
-                                <CheckSquare size={20} />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={handleBulkDelete} className="text-red-400 hover:text-red-500 rounded-full" title="Sil">
-                                <Trash2 size={20} />
-                            </Button>
-                        </div>
-                    </>
-                ) : (
-                    <>
-                        <div className="flex items-center gap-3">
-                            <Button variant="ghost" size="icon" onClick={onBack} className="text-gray-300 hover:text-white hover:bg-dark-bg rounded-full">
-                                <ArrowLeft size={20} />
-                            </Button>
-
-                            <div 
-                                className="relative cursor-pointer"
-                                onClick={() => onViewProfile && onViewProfile(chat.id)}
-                            >
-                                <Avatar
-                                    src={chat.photoURL}
-                                    fallback={chat.name ? chat.name[0] : '?'}
-                                    className="w-10 h-10 ring-2 ring-dark-border hover:ring-primary transition-all"
-                                />
-                                {chat.isOnline && (
-                                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-dark-surface"></div>
-                                )}
-                            </div>
-
-                            <div className="flex flex-col">
-                                <span className="font-semibold text-gray-100 text-sm">{chat.name}</span>
-                                {otherUserTyping ? (
-                                    <span className="text-xs text-green-400 font-medium animate-pulse">yazıyor...</span>
-                                ) : (
-                                    <span className="text-xs text-gray-400">
-                                        {chat.isOnline ? 'Çevrimiçi' : chat.lastSeen ? `Son görülme: ${new Date(chat.lastSeen?.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Çevrimdışı'}
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-1">
-                            <CallButton onClick={onCallStart} onVideoCall={onVideoCallStart} />
-                            <Button variant="ghost" size="icon" onClick={() => setSelectionMode(true)} className="text-gray-400 hover:text-white rounded-full" title="Mesaj seç">
-                                <CheckSquare size={20} />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white rounded-full">
-                                <MoreVertical size={20} />
-                            </Button>
-                        </div>
-                    </>
-                )}
+            <div className="p-4 border-b border-dark-border flex items-center gap-4 bg-dark-bg/80 backdrop-blur-md sticky top-0 z-10">
+                <Button variant="ghost" onClick={onBack} className="px-2">
+                    <ArrowLeft size={20} />
+                </Button>
+                <Avatar fallback={chat.name[0]} src={chat.photoURL} className="w-8 h-8 bg-gradient-to-br from-primary to-secondary" />
+                <div className="flex-1">
+                    <h2 className="font-semibold text-sm">{chat.name}</h2>
+                    {otherUserTyping ? (
+                        <span className="text-xs text-primary flex items-center gap-1">
+                            <span className="w-1 h-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
+                            <span className="w-1 h-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
+                            <span className="w-1 h-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
+                            yazıyor
+                        </span>
+                    ) : chat.isOnline ? (
+                        <span className="text-xs text-green-400 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                            Çevrimiçi
+                        </span>
+                    ) : (
+                        <span className="text-xs text-gray-400">Çevrimdışı</span>
+                    )}
+                </div>
             </div>
 
-            {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-opacity-5">
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3">
                 {messages.map((msg) => {
                     const isMe = msg.senderId === user.uid;
+                    const replyToMsg = msg.replyTo ? messages.find(m => m.id === msg.replyTo) : null;
                     const reactions = messageReactions[msg.id] || {};
-
-                    const isSelected = selectedMessages.has(msg.id);
 
                     return (
                         <div
                             key={msg.id}
                             className={cn(
-                                "flex w-full group relative",
-                                isMe ? "justify-end" : "justify-start",
-                                isSelected && "bg-primary/10 rounded-lg p-1"
+                                "flex w-full",
+                                isMe ? "justify-end" : "justify-start"
                             )}
-                            onClick={() => selectionMode && toggleMessageSelection(msg.id)}
                         >
-                            {selectionMode && (
-                                <div className="absolute left-2 top-1/2 -translate-y-1/2 z-10">
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className={cn(
-                                            "w-6 h-6 rounded-full",
-                                            isSelected ? "bg-primary text-white" : "bg-dark-surface text-gray-400"
-                                        )}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            toggleMessageSelection(msg.id);
-                                        }}
-                                    >
-                                        {isSelected ? <CheckSquare size={16} /> : <Square size={16} />}
-                                    </Button>
-                                </div>
-                            )}
                             <div
                                 className={cn(
-                                    "max-w-[85%] rounded-2xl p-3 shadow-sm relative transition-all message-enter animate-slide-in-up",
+                                    "max-w-[75%] sm:max-w-[85%] rounded-2xl p-3 break-words relative group shadow-md",
                                     isMe
-                                        ? "bg-primary text-primary-foreground rounded-tr-none"
-                                        : "bg-dark-surface text-gray-100 rounded-tl-none border border-dark-border",
-                                    selectionMode && "ml-8",
-                                    isSelected && "ring-2 ring-primary"
+                                        ? "bg-message-sent text-white rounded-tr-sm"
+                                        : "bg-message-received text-gray-100 rounded-tl-sm"
                                 )}
                             >
-                                {/* Reply Context */}
-                                {msg.replyTo && (
-                                    <div className="mb-2 p-2 rounded bg-black/20 text-xs border-l-2 border-white/50">
-                                        <p className="opacity-70">Yanıtlanan mesaj</p>
+                                {/* Reply preview */}
+                                {replyToMsg && (
+                                    <div className="mb-2 p-2 bg-black/20 rounded-lg border-l-2 border-white/30 text-xs">
+                                        <p className="font-semibold opacity-70">
+                                            {replyToMsg.senderId === user.uid ? 'Siz' : chat.name}
+                                        </p>
+                                        <p className="opacity-60 truncate">{replyToMsg.text || '📎 Dosya'}</p>
                                     </div>
                                 )}
 
                                 {renderMessageContent(msg)}
 
-                                <div className="flex items-center justify-end gap-1 mt-1">
-                                    <span className="text-[10px] opacity-70">
+                                <div className="flex items-center justify-between mt-1.5 gap-2">
+                                    <span className="text-[10px] opacity-80 inline-flex items-center gap-1.5">
                                         {msg.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        {msg.edited && <span className="text-[9px]">(düzenlendi)</span>}
                                     </span>
                                     {isMe && (
-                                        <span className="text-blue-300">
-                                            {msg.read ? <CheckCheck size={14} /> : <Check size={14} />}
+                                        <span className="inline-flex items-center">
+                                            {msg.read ? (
+                                                <CheckCheck size={16} className="text-blue-300" strokeWidth={2.5} />
+                                            ) : msg.delivered ? (
+                                                <CheckCheck size={16} className="text-white/60" strokeWidth={2} />
+                                            ) : (
+                                                <Check size={16} className="text-white/60" strokeWidth={2} />
+                                            )}
                                         </span>
                                     )}
                                 </div>
 
-                                {/* Reactions Display */}
-                                {Object.keys(reactions).length > 0 && (
-                                    <div className="absolute -bottom-3 right-0 bg-dark-surface border border-dark-border rounded-full px-2 py-0.5 text-xs shadow-sm flex items-center gap-1">
-                                        {Object.values(reactions).slice(0, 3).map((r, i) => (
-                                            <span key={i}>{r.emoji}</span>
-                                        ))}
-                                        {Object.keys(reactions).length > 1 && (
-                                            <span className="text-gray-400 text-[10px]">{Object.keys(reactions).length}</span>
+                                {/* Message menu */}
+                                {isMe && (
+                                    <button
+                                        onClick={() => setMessageMenuOpen(messageMenuOpen === msg.id ? null : msg.id)}
+                                        className="absolute -top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-dark-surface rounded-full p-1 shadow-lg"
+                                    >
+                                        <MoreVertical size={16} />
+                                    </button>
+                                )}
+
+                                {messageMenuOpen === msg.id && (
+                                    <div className="absolute top-full right-0 mt-2 bg-dark-surface border border-dark-border rounded-xl shadow-xl z-20 overflow-hidden">
+                                        {msg.type === 'text' && (
+                                            <button
+                                                onClick={() => {
+                                                    setEditingMessage(msg);
+                                                    setNewMessage(msg.text);
+                                                    setMessageMenuOpen(null);
+                                                }}
+                                                className="flex items-center gap-2 px-4 py-2 hover:bg-dark-border w-full text-left text-sm"
+                                            >
+                                                <Edit size={16} />
+                                                Düzenle
+                                            </button>
                                         )}
+                                        <button
+                                            onClick={() => {
+                                                setReplyingTo(msg);
+                                                setMessageMenuOpen(null);
+                                            }}
+                                            className="flex items-center gap-2 px-4 py-2 hover:bg-dark-border w-full text-left text-sm"
+                                        >
+                                            <Reply size={16} />
+                                            Yanıtla
+                                        </button>
+                                        <button
+                                            onClick={async () => {
+                                                if (confirm('Mesajı silmek istediğinizden emin misiniz?')) {
+                                                    try {
+                                                        await deleteDoc(doc(db, `chats/${chatId}/messages`, msg.id));
+                                                        setMessageMenuOpen(null);
+                                                    } catch (err) {
+                                                        console.error("Error deleting message:", err);
+                                                    }
+                                                }
+                                            }}
+                                            className="flex items-center gap-2 px-4 py-2 hover:bg-red-500/20 text-red-400 w-full text-left text-sm"
+                                        >
+                                            <Trash2 size={16} />
+                                            Sil
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* Reaction button */}
+                                <button
+                                    onClick={() => setSelectedMessageForReaction(selectedMessageForReaction === msg.id ? null : msg.id)}
+                                    className="absolute -top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity bg-dark-surface rounded-full p-1 shadow-lg"
+                                >
+                                    <Smile size={16} />
+                                </button>
+
+                                {/* Reaction picker */}
+                                {selectedMessageForReaction === msg.id && (
+                                    <div className="absolute top-full mt-2 bg-dark-surface border border-dark-border rounded-xl p-2 shadow-xl flex gap-2 z-20">
+                                        {['❤️', '👍', '😂', '😮', '😢', '🔥'].map(emoji => (
+                                            <button
+                                                key={emoji}
+                                                onClick={() => handleReaction(msg.id, emoji)}
+                                                className="hover:scale-125 transition-transform text-xl"
+                                            >
+                                                {emoji}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Display reactions */}
+                                {Object.keys(reactions).length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-2">
+                                        {Object.entries(reactions).map(([userId, reactionData]) => (
+                                            <span
+                                                key={userId}
+                                                className="inline-flex items-center bg-dark-bg/50 rounded-full px-2 py-0.5 text-sm"
+                                            >
+                                                {reactionData.emoji}
+                                            </span>
+                                        ))}
                                     </div>
                                 )}
                             </div>
@@ -636,259 +577,194 @@ const ChatScreen = ({ user, chat, onBack, onCallStart, onVideoCallStart, onViewP
                 <div ref={messagesEndRef} />
             </div>
 
-            {/* Input Area */}
-            <div className="p-2 bg-dark-surface border-t border-dark-border relative">
-                {/* Attachment Menu - Above the + button */}
-                {showAttachmentMenu && (
-                    <div className="absolute bottom-full right-4 mb-2 bg-dark-surface border border-dark-border rounded-xl shadow-2xl p-3 grid grid-cols-3 gap-3 animate-in slide-in-from-bottom-5 z-20 w-64">
-                        <button 
-                            onClick={() => {
-                                fileInputRef.current?.click();
-                                setShowAttachmentMenu(false);
-                            }} 
-                            className="flex flex-col items-center gap-2 p-3 hover:bg-dark-bg rounded-lg transition-colors"
-                        >
-                            <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-500">
-                                <ImageIcon size={20} />
-                            </div>
-                            <span className="text-xs text-gray-300">Fotoğraf</span>
-                        </button>
-                        <button 
-                            onClick={() => {
-                                fileMultiInputRef.current?.click();
-                                setShowAttachmentMenu(false);
-                            }} 
-                            className="flex flex-col items-center gap-2 p-3 hover:bg-dark-bg rounded-lg transition-colors"
-                        >
-                            <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500">
-                                <Paperclip size={20} />
-                            </div>
-                            <span className="text-xs text-gray-300">Dosya</span>
-                        </button>
-                        <button 
-                            onClick={() => {
-                                setShowVoiceRecorder(true);
-                                setShowAttachmentMenu(false);
-                            }} 
-                            className="flex flex-col items-center gap-2 p-3 hover:bg-dark-bg rounded-lg transition-colors"
-                        >
-                            <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center text-red-500">
-                                <Mic size={20} />
-                            </div>
-                            <span className="text-xs text-gray-300">Sesli Mesaj</span>
-                        </button>
-                        <button 
-                            onClick={() => {
-                                setShowLocationPicker(true);
-                                setShowAttachmentMenu(false);
-                            }} 
-                            className="flex flex-col items-center gap-2 p-3 hover:bg-dark-bg rounded-lg transition-colors"
-                        >
-                            <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center text-green-500">
-                                <MapPin size={20} />
-                            </div>
-                            <span className="text-xs text-gray-300">Konum</span>
-                        </button>
-                        <button 
-                            onClick={() => {
-                                setShowPollCreator(true);
-                                setShowAttachmentMenu(false);
-                            }} 
-                            className="flex flex-col items-center gap-2 p-3 hover:bg-dark-bg rounded-lg transition-colors"
-                        >
-                            <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-500">
-                                <BarChart size={20} />
-                            </div>
-                            <span className="text-xs text-gray-300">Anket</span>
-                        </button>
-                        <button 
-                            onClick={() => {
-                                setShowEmojiPicker(!showEmojiPicker);
-                                setShowAttachmentMenu(false);
-                            }} 
-                            className="flex flex-col items-center gap-2 p-3 hover:bg-dark-bg rounded-lg transition-colors"
-                        >
-                            <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-500">
-                                <Smile size={20} />
-                            </div>
-                            <span className="text-xs text-gray-300">Emoji</span>
-                        </button>
+            {/* Reply preview */}
+            {replyingTo && (
+                <div className="px-4 py-2 bg-dark-surface/50 flex items-center gap-2 border-t border-dark-border">
+                    <Reply size={16} className="text-primary" />
+                    <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold">{replyingTo.senderId === user.uid ? 'Siz' : chat.name}</p>
+                        <p className="text-xs text-gray-400 truncate">{replyingTo.text || '📎 Dosya'}</p>
                     </div>
-                )}
-
-                {/* Reply Preview */}
-                {replyingTo && (
-                    <div className="flex items-center justify-between bg-dark-bg p-2 rounded-lg mb-2 border-l-4 border-primary">
-                        <div className="flex flex-col">
-                            <span className="text-xs text-primary font-medium">Yanıtlanıyor</span>
-                            <span className="text-sm truncate text-gray-400">{replyingTo.text || 'Medya'}</span>
-                        </div>
-                        <Button variant="ghost" size="sm" onClick={() => setReplyingTo(null)}>
-                            <X size={16} />
-                        </Button>
-                    </div>
-                )}
-
-                <form onSubmit={handleSend} className="flex items-end gap-2 max-w-4xl mx-auto">
-                    {/* Camera Button - Far Left */}
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={takePicture}
-                        className="text-gray-400 hover:text-white mb-1"
-                        title="Kamera"
-                    >
-                        <Camera size={24} />
+                    <Button variant="ghost" onClick={() => setReplyingTo(null)} className="p-1">
+                        <X size={16} />
                     </Button>
+                </div>
+            )}
 
-                    {/* Input Field - Wide */}
-                    <div className="flex-1 bg-dark-bg rounded-2xl flex items-end p-2 border border-dark-border focus-within:border-primary/50 transition-colors">
-                        <textarea
+            {/* Edit preview */}
+            {editingMessage && (
+                <div className="px-4 py-2 bg-yellow-500/10 flex items-center gap-2 border-t border-yellow-500/30">
+                    <Edit size={16} className="text-yellow-500" />
+                    <div className="flex-1">
+                        <p className="text-xs font-semibold text-yellow-500">Düzenleniyor</p>
+                    </div>
+                    <Button variant="ghost" onClick={() => { setEditingMessage(null); setNewMessage(''); }} className="p-1">
+                        <X size={16} />
+                    </Button>
+                </div>
+            )}
+
+            {/* Emoji Picker */}
+            {showEmojiPicker && (
+                <div className="absolute bottom-20 right-4 z-30">
+                    <EmojiPicker onEmojiClick={handleEmojiClick} theme="dark" />
+                </div>
+            )}
+
+            {/* Input area */}
+            {showVoiceRecorder ? (
+                <VoiceMessageRecorder
+                    onSend={async (voiceData) => {
+                        await addDoc(collection(db, `chats/${chatId}/messages`), {
+                            ...voiceData,
+                            senderId: user.uid,
+                            receiverId: chat.id,
+                            timestamp: serverTimestamp(),
+                            sent: true,
+                            delivered: false,
+                            read: false
+                        });
+                        setShowVoiceRecorder(false);
+                    }}
+                    onCancel={() => setShowVoiceRecorder(false)}
+                />
+            ) : showLocationPicker ? (
+                <LocationPicker
+                    onSend={async (locationData) => {
+                        await addDoc(collection(db, `chats/${chatId}/messages`), {
+                            ...locationData,
+                            senderId: user.uid,
+                            receiverId: chat.id,
+                            timestamp: serverTimestamp(),
+                            sent: true,
+                            delivered: false,
+                            read: false
+                        });
+                        setShowLocationPicker(false);
+                    }}
+                    onCancel={() => setShowLocationPicker(false)}
+                />
+            ) : showPollCreator ? (
+                <PollCreator
+                    onSend={async (pollData) => {
+                        await addDoc(collection(db, `chats/${chatId}/messages`), {
+                            ...pollData,
+                            senderId: user.uid,
+                            receiverId: chat.id,
+                            timestamp: serverTimestamp(),
+                            sent: true,
+                            delivered: false,
+                            read: false
+                        });
+                        setShowPollCreator(false);
+                    }}
+                    onCancel={() => setShowPollCreator(false)}
+                />
+            ) : (
+                <>
+                    {/* Typing Indicator */}
+                    {otherUserTyping && (
+                        <div className="flex items-center gap-2 px-4 py-2 text-sm text-gray-400">
+                            <div className="flex space-x-1">
+                                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span>
+                                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce animation-delay-150"></span>
+                                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce animation-delay-300"></span>
+                            </div>
+                            <span>yazıyor...</span>
+                        </div>
+                    )}
+
+                    <form onSubmit={handleSend} className="p-4 border-t border-dark-border bg-dark-bg/80 backdrop-blur-md flex items-center gap-3 relative">
+                        {/* Camera Button */}
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            className="rounded-full w-12 h-12 p-0 bg-primary text-white"
+                            onClick={takePicture}
+                            disabled={uploading}
+                            title="Fotoğraf Çek"
+                        >
+                            <Camera size={24} />
+                        </Button>
+
+                        {/* Text Input */}
+                        <Input
+                            id="message-input"
+                            name="message"
+                            type="text"
                             value={newMessage}
                             onChange={(e) => handleTyping(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                    e.preventDefault();
-                                    handleSend(e);
-                                }
-                            }}
-                            placeholder="Bir mesaj yazın..."
-                            className="flex-1 bg-transparent border-none focus:ring-0 text-gray-100 placeholder-gray-500 min-h-[40px] max-h-[120px] resize-none py-2 px-3 scrollbar-thin scrollbar-thumb-gray-700"
-                            rows={1}
+                            placeholder={editingMessage ? "Mesajı düzenle..." : "Bir mesaj yazın..."}
+                            className="flex-1 py-2.5 px-3 rounded-lg bg-dark-surface text-white"
+                            autoComplete="off"
                             inputMode="text"
                             autoCapitalize="sentences"
                         />
 
-                        {newMessage.trim() ? (
-                            <Button
-                                type="submit"
-                                size="icon"
-                                className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full w-10 h-10 mb-0.5 transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg shadow-primary/20"
-                                disabled={uploading}
-                            >
-                                {uploading ? <Loader2 className="animate-spin" /> : <Send size={20} />}
-                            </Button>
-                        ) : null}
-                    </div>
+                        {/* Attachment Button */}
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            className="rounded-full w-10 h-10 p-0"
+                            onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
+                            title="Ekler"
+                        >
+                            <Plus size={20} />
+                        </Button>
 
-                    {/* Plus Button - Far Right */}
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
-                        className="text-gray-400 hover:text-white mb-1 relative"
-                        title="Ekler"
-                    >
-                        <Plus size={24} className={cn("transition-transform duration-200", showAttachmentMenu && "rotate-45")} />
-                    </Button>
-                </form>
+                        {/* Send Button */}
+                        <Button
+                            type="submit"
+                            className="rounded-full w-10 h-10 p-0 bg-primary hover:bg-primary-hover"
+                            disabled={!newMessage.trim() && !uploading}
+                        >
+                            <Send size={18} />
+                        </Button>
 
-                {/* Hidden Inputs */}
-                <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    accept="image/*,video/*"
-                    onChange={handleFileUpload}
-                />
-                <input
-                    type="file"
-                    ref={fileMultiInputRef}
-                    className="hidden"
-                    accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
-                    onChange={handleFileUpload}
-                />
+                        {/* Attachment Popup Menu */}
+                        {showAttachmentMenu && (
+                            <div className="absolute bottom-20 right-16 z-30 bg-dark-surface rounded-lg shadow-lg p-3 flex flex-col space-y-2">
+                                <Button variant="ghost" className="flex items-center gap-2" onClick={() => fileInputRef.current?.click()}>
+                                    <ImageIcon size={16} /> Fotoğraf
+                                </Button>
+                                <Button variant="ghost" className="flex items-center gap-2" onClick={() => fileMultiInputRef.current?.click()}>
+                                    <Paperclip size={16} /> Dosya
+                                </Button>
+                                <Button variant="ghost" className="flex items-center gap-2" onClick={() => { setShowVoiceRecorder(true); setShowAttachmentMenu(false); }}>
+                                    <Mic size={16} /> Sesli Mesaj
+                                </Button>
+                                <Button variant="ghost" className="flex items-center gap-2" onClick={() => { setShowLocationPicker(true); setShowAttachmentMenu(false); }}>
+                                    <MapPin size={16} /> Konum
+                                </Button>
+                                <Button variant="ghost" className="flex items-center gap-2" onClick={() => { setShowPollCreator(true); setShowAttachmentMenu(false); }}>
+                                    <BarChart size={16} /> Anket
+                                </Button>
+                                <Button variant="ghost" className="flex items-center gap-2" onClick={() => setShowEmojiPicker(!showEmojiPicker)}>
+                                    <Smile size={16} /> Emoji
+                                </Button>
+                            </div>
+                        )}
 
-                {/* Emoji Picker */}
-                {showEmojiPicker && (
-                    <div className="absolute bottom-20 left-4 z-20">
-                        <EmojiPicker
-                            theme="dark"
-                            onEmojiClick={handleEmojiClick}
-                            lazyLoadEmojis={true}
+                        {/* Hidden file inputs */}
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleFileUpload}
+                            className="hidden"
                         />
-                    </div>
-                )}
+                        <input
+                            ref={fileMultiInputRef}
+                            type="file"
+                            onChange={handleFileUpload}
+                            className="hidden"
+                        />
+                    </form>
+                </>
+            )}
 
-                {/* Voice Recorder Modal */}
-                {showVoiceRecorder && (
-                    <VoiceMessageRecorder
-                        onSend={async (audioBlob, duration) => {
-                            setUploading(true);
-                            try {
-                                const storageRef = ref(storage, `voice-messages/${Date.now()}.webm`);
-                                await uploadBytes(storageRef, audioBlob);
-                                const url = await getDownloadURL(storageRef);
-
-                                await addDoc(collection(db, `chats/${chatId}/messages`), {
-                                    senderId: user.uid,
-                                    receiverId: chat.id,
-                                    timestamp: serverTimestamp(),
-                                    type: 'voice',
-                                    fileURL: url,
-                                    duration: duration,
-                                    sent: true,
-                                    delivered: false,
-                                    read: false
-                                });
-                            } catch (err) {
-                                console.error("Error sending voice message:", err);
-                            } finally {
-                                setUploading(false);
-                                setShowVoiceRecorder(false);
-                            }
-                        }}
-                        onCancel={() => setShowVoiceRecorder(false)}
-                    />
-                )}
-
-                {/* Location Picker Modal */}
-                {showLocationPicker && (
-                    <LocationPicker
-                        onSend={async (location) => {
-                            await addDoc(collection(db, `chats/${chatId}/messages`), {
-                                senderId: user.uid,
-                                receiverId: chat.id,
-                                timestamp: serverTimestamp(),
-                                type: 'location',
-                                location: location,
-                                text: 'Konum',
-                                sent: true,
-                                delivered: false,
-                                read: false
-                            });
-                            setShowLocationPicker(false);
-                            setShowAttachmentMenu(false);
-                        }}
-                        onCancel={() => setShowLocationPicker(false)}
-                    />
-                )}
-
-                {/* Poll Creator Modal */}
-                {showPollCreator && (
-                    <PollCreator
-                        onSend={async (pollData) => {
-                            await addDoc(collection(db, `chats/${chatId}/messages`), {
-                                senderId: user.uid,
-                                receiverId: chat.id,
-                                timestamp: serverTimestamp(),
-                                type: 'poll',
-                                ...pollData,
-                                sent: true,
-                                delivered: false,
-                                read: false
-                            });
-                            setShowPollCreator(false);
-                            setShowAttachmentMenu(false);
-                        }}
-                        onCancel={() => setShowPollCreator(false)}
-                    />
-                )}
-            </div>
-
-            <audio ref={audioRef} className="hidden" onEnded={() => setPlayingVoice(null)} />
+            {/* Hidden audio element */}
+            <audio ref={audioRef} onEnded={() => setPlayingVoice(null)} />
         </div>
     );
 };
