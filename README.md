@@ -13,6 +13,25 @@
 
 </div>
 
+## 📥 Download
+
+### Android APK
+
+**Latest Release**: [Download v1.0](https://github.com/Gear2Head/GearLink/releases/latest)
+
+```bash
+# Direct download link (after Release is created)
+https://github.com/Gear2Head/GearLink/releases/download/v1.0/app-debug.apk
+```
+
+**Installation**:
+1. Enable "Unknown sources" in Android settings
+2. Download APK
+3. Install and open
+4. Configure Firebase (see Setup section)
+
+> ⚠️ **Note**: First release requires manual upload. See [RELEASE_GUIDE.md](RELEASE_GUIDE.md) for instructions.
+
 ---
 
 ## 📱 Features
