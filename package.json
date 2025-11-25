@@ -1,0 +1,50 @@
+{
+    "name": "gearlink",
+    "private": true,
+    "version": "0.0.0",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
+        "preview": "vite preview",
+        "build:android": "npm run build && npx cap sync && npx cap open android",
+        "build:apk": "npm run build && npx cap sync && cd android && gradlew assembleDebug",
+        "build:apk:release": "npm run build && npx cap sync && cd android && gradlew assembleRelease",
+        "sync": "npx cap sync"
+    },
+    "dependencies": {
+        "@capacitor/android": "^7.4.4",
+        "@capacitor/camera": "^7.0.2",
+        "@capacitor/cli": "^7.4.4",
+        "@capacitor/core": "^7.4.4",
+        "@capacitor/filesystem": "^7.1.4",
+        "@capacitor/geolocation": "^7.1.5",
+        "@capacitor/ios": "^7.4.4",
+        "@capacitor/push-notifications": "^7.0.3",
+        "@google/generative-ai": "^0.24.1",
+        "capacitor-voice-recorder": "^7.0.6",
+        "clsx": "^2.1.0",
+        "date-fns": "^4.1.0",
+        "emoji-picker-react": "^4.15.2",
+        "firebase": "^10.8.0",
+        "lucide-react": "^0.344.0",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "tailwind-merge": "^2.2.1"
+    },
+    "devDependencies": {
+        "@types/react": "^18.2.56",
+        "@types/react-dom": "^18.2.19",
+        "@vitejs/plugin-react": "^4.2.1",
+        "autoprefixer": "^10.4.18",
+        "eslint": "^8.56.0",
+        "eslint-plugin-react": "^7.33.2",
+        "eslint-plugin-react-hooks": "^4.6.0",
+        "eslint-plugin-react-refresh": "^0.4.5",
+        "postcss": "^8.4.35",
+        "tailwindcss": "^3.4.1",
+        "typescript": "^5.9.3",
+        "vite": "^5.1.4"
+    }
+}

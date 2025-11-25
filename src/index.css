@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* WhatsApp Green Theme - HSL format for Tailwind */
+    --primary: 162 73% 33%;
+    --primary-hover: 162 73% 28%;
+    --success: 162 73% 33%;
+    --error: 354 70% 61%;
+    --warning: 48 98% 73%;
+
+    /* Dark backgrounds - HSL format */
+    --dark-bg: 200 30% 8%;
+    --dark-surface: 200 23% 16%;
+    --dark-hover: 200 20% 21%;
+    --dark-border: 200 20% 21%;
+
+    /* Messages - HSL format */
+    --message-sent: 162 88% 19%;
+    --message-received: 200 23% 16%;
+  }
+
+  body {
+    @apply bg-dark-bg text-white antialiased;
+  }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-dark-surface;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-dark-border rounded-full hover:bg-primary/50;
+}
+
+/* Smooth transitions */
+* {
+  @apply transition-colors duration-200;
+}
+
+/* WhatsApp message bubbles */
+.message-sent {
+  @apply bg-message-sent text-white;
+}
+
+.message-received {
+  @apply bg-message-received text-white;
+}

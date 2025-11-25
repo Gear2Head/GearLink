@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">GearLink</string>
+    <string name="title_activity_main">GearLink</string>
+    <string name="package_name">com.gearlink.app</string>
+    <string name="custom_url_scheme">com.gearlink.app</string>
+</resources>
