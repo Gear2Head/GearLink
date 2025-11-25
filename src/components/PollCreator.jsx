@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { BarChart, Plus, X } from 'lucide-react';
-import { Button } from './ui';
+import { Button, Input } from './ui';
 import { createPoll } from '../lib/pollUtils';
 
 const PollCreator = ({ onSend, onCancel }) => {
