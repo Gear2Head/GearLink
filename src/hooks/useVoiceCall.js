@@ -12,6 +12,25 @@ import {
 } from '../lib/callSignaling';
 
 export const useVoiceCall = (db, currentUser) => {
+    // Return empty functions if db is not available
+    if (!db || !currentUser) {
+        return {
+            callState: 'idle',
+            currentCall: null,
+            remoteUser: null,
+            isMuted: false,
+            isVideoEnabled: false,
+            connectionState: 'disconnected',
+            localStream: null,
+            remoteStream: null,
+            startCall: () => console.warn('Voice call not available - Firebase not initialized'),
+            acceptCall: () => {},
+            rejectCall: () => {},
+            endCall: () => {},
+            toggleMute: () => {},
+            toggleVideo: () => {}
+        };
+    }
     const [callState, setCallState] = useState('idle'); // idle, calling, ringing, active, ended
     const [currentCall, setCurrentCall] = useState(null);
     const [remoteUser, setRemoteUser] = useState(null);

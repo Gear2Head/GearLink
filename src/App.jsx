@@ -19,6 +19,7 @@ import { Button } from './components/ui';
 import { useVoiceCall } from './hooks/useVoiceCall';
 import IncomingCallModal from './components/IncomingCallModal';
 import ActiveCallScreen from './components/ActiveCallScreen';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
     const [user, setUser] = useState(null);
@@ -33,21 +34,32 @@ function App() {
     const [versionClickCount, setVersionClickCount] = useState(0);
     const botServiceRef = useRef(null);
 
-    const auth = getFirebaseAuth();
-    const db = getFirebaseDb();
-
     useEffect(() => {
         console.log('App.jsx: useEffect started');
 
-        console.log('App.jsx: Firebase instances obtained');
+        let auth;
+        let db;
+        
+        try {
+            auth = getFirebaseAuth();
+            db = getFirebaseDb();
+            console.log('App.jsx: Firebase instances obtained');
+        } catch (error) {
+            console.error('App.jsx: Failed to get Firebase instances:', error);
+            // Continue anyway - user might be able to use app offline
+            setLoading(false);
+            return;
+        }
 
         // Safety timeout for offline scenarios
         const safetyTimeout = setTimeout(() => {
             console.warn('App.jsx: Firebase timeout - continuing anyway');
             setLoading(false);
-        }, 3000);
+        }, 5000); // Increased to 5 seconds
 
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        let unsubscribe;
+        try {
+            unsubscribe = onAuthStateChanged(auth, async (user) => {
             clearTimeout(safetyTimeout);
             console.log('App.jsx: Auth state changed', { user: user?.email || 'null' });
 
@@ -124,15 +136,33 @@ function App() {
                 setUser(user);
                 setLoading(false);
             }
-        });
+            }, (error) => {
+                console.error('App.jsx: Auth state change error:', error);
+                // Don't block the app - allow it to continue
+                setLoading(false);
+            });
+        } catch (error) {
+            console.error('App.jsx: Error setting up auth listener:', error);
+            setLoading(false);
+        }
 
         return () => {
             clearTimeout(safetyTimeout);
-            unsubscribe();
+            if (unsubscribe) {
+                unsubscribe();
+            }
         };
     }, []);
 
-    // Voice Call Hook
+    // Voice Call Hook - Safely get db instance
+    let dbForCall;
+    try {
+        dbForCall = getFirebaseDb();
+    } catch (error) {
+        console.warn('Firebase DB not available for voice calls:', error);
+        dbForCall = null;
+    }
+    
     const {
         callState,
         currentCall,
@@ -148,15 +178,21 @@ function App() {
         endCall,
         toggleMute,
         toggleVideo
-    } = useVoiceCall(db, user);
+    } = useVoiceCall(dbForCall, user);
 
     const handleLogout = async () => {
         try {
+    // Firebase instances - will be obtained safely in useEffect
+            
             if (user) {
-                await setDoc(doc(db, 'users', user.uid), {
-                    isOnline: false,
-                    lastSeen: serverTimestamp()
-                }, { merge: true });
+                try {
+                    await setDoc(doc(db, 'users', user.uid), {
+                        isOnline: false,
+                        lastSeen: serverTimestamp()
+                    }, { merge: true });
+                } catch (dbError) {
+                    console.warn('Failed to update user status on logout:', dbError);
+                }
             }
             await signOut(auth);
             setUser(null);
