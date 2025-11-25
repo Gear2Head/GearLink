@@ -1,48 +1,4 @@
-let Peer;
-try {
-    // Try to import simple-peer
-    if (typeof window !== 'undefined' && window.SimplePeer) {
-        Peer = window.SimplePeer;
-    } else {
-        // Fallback mock for build
-        Peer = class {
-            constructor(opts) {
-                this.initiator = opts?.initiator || false;
-                this.stream = opts?.stream || null;
-                this.destroyed = false;
-                this.listeners = {};
-            }
-            on(event, callback) {
-                if (!this.listeners[event]) this.listeners[event] = [];
-                this.listeners[event].push(callback);
-            }
-            signal(data) {
-                // Mock signal
-            }
-            destroy() {
-                this.destroyed = true;
-            }
-        };
-    }
-} catch (e) {
-    console.warn('SimplePeer not available, using mock');
-    Peer = class {
-        constructor(opts) {
-            this.initiator = opts?.initiator || false;
-            this.stream = opts?.stream || null;
-            this.destroyed = false;
-            this.listeners = {};
-        }
-        on(event, callback) {
-            if (!this.listeners[event]) this.listeners[event] = [];
-            this.listeners[event].push(callback);
-        }
-        signal(data) {}
-        destroy() {
-            this.destroyed = true;
-        }
-    };
-}
+import SimplePeer from 'simple-peer';
 
 export class WebRTCService {
     constructor() {
@@ -72,9 +28,7 @@ export class WebRTCService {
     }
 
     createPeer(initiator, stream, onSignal, onStream, onError) {
-        // if (!Peer) return null;
-
-        this.peer = new Peer({
+        this.peer = new SimplePeer({
             initiator,
             stream,
             trickle: false,
@@ -133,10 +87,29 @@ export class WebRTCService {
         return false;
     }
 
+    toggleVideo() {
+        if (this.stream) {
+            const videoTrack = this.stream.getVideoTracks()[0];
+            if (videoTrack) {
+                videoTrack.enabled = !videoTrack.enabled;
+                return !videoTrack.enabled;
+            }
+        }
+        return false;
+    }
+
     isMuted() {
         if (this.stream) {
             const audioTrack = this.stream.getAudioTracks()[0];
             return audioTrack ? !audioTrack.enabled : false;
+        }
+        return false;
+    }
+
+    isVideoOff() {
+        if (this.stream) {
+            const videoTrack = this.stream.getVideoTracks()[0];
+            return videoTrack ? !videoTrack.enabled : false;
         }
         return false;
     }

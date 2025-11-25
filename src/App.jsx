@@ -8,7 +8,10 @@ import ChatScreen from './components/ChatScreen';
 import ProfileScreen from './components/ProfileScreen';
 import EmailVerificationBanner from './components/EmailVerificationBanner';
 import AdminPanel from './components/AdminPanel';
+import IncomingCallModal from './components/IncomingCallModal';
+import ActiveCallScreen from './components/ActiveCallScreen';
 import KubraNisaBotService from './lib/kubraNisaBotService';
+import { useVoiceCall } from './hooks/useVoiceCall';
 
 function App() {
     const [user, setUser] = useState(null);
@@ -18,6 +21,25 @@ function App() {
     const [showAdmin, setShowAdmin] = useState(false);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     const botServiceRef = useRef(null);
+
+    // Get Firebase instances
+    const auth = getFirebaseAuth();
+    const db = getFirebaseDb();
+
+    // Initialize voice/video calling
+    const {
+        callState,
+        currentCall,
+        remoteUser,
+        isMuted,
+        isVideoEnabled,
+        startCall,
+        acceptCall,
+        rejectCall,
+        endCall,
+        toggleMute,
+        toggleVideo
+    } = useVoiceCall(db, user);
 
     // Responsive resize listener
     useEffect(() => {
@@ -205,6 +227,28 @@ function App() {
                         )}
                     </div>
                 </div>
+            )}
+
+            {/* Incoming Call Modal */}
+            {callState === 'ringing' && remoteUser && (
+                <IncomingCallModal
+                    caller={remoteUser}
+                    isVideo={currentCall?.isVideo || false}
+                    onAccept={() => acceptCall(currentCall?.isVideo)}
+                    onReject={rejectCall}
+                />
+            )}
+
+            {/* Active Call Screen */}
+            {callState === 'active' && remoteUser && (
+                <ActiveCallScreen
+                    remoteUser={remoteUser}
+                    isMuted={isMuted}
+                    isVideoEnabled={isVideoEnabled}
+                    onToggleMute={toggleMute}
+                    onToggleVideo={toggleVideo}
+                    onEndCall={endCall}
+                />
             )}
         </>
     );
