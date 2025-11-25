@@ -8,12 +8,31 @@ import { X, Trash2, RefreshCw, Eye, MessageSquare } from 'lucide-react';
 const AdminPanel = ({ onClose, currentUser }) => {
     const db = getFirebaseDb();
     const [allMessages, setAllMessages] = useState([]);
-    const [stats, setStats] = useState({ total: 0, chats: 0 });
+    const [deletedMessages, setDeletedMessages] = useState([]);
+    const [activeTab, setActiveTab] = useState('messages'); // 'messages' or 'deleted'
+    const [stats, setStats] = useState({ total: 0, chats: 0, deleted: 0 });
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         loadStats();
         loadMessages();
+        loadDeletedMessages();
+        
+        // Listen to deleted messages in real-time
+        const unsubscribe = onSnapshot(collection(db, 'deletedMessages'), (snapshot) => {
+            const deleted = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            setDeletedMessages(deleted.sort((a, b) => {
+                const aTime = a.deletedAt?.toDate ? a.deletedAt.toDate() : new Date(a.deletedAt);
+                const bTime = b.deletedAt?.toDate ? b.deletedAt.toDate() : new Date(b.deletedAt);
+                return bTime - aTime;
+            }));
+            setStats(prev => ({ ...prev, deleted: deleted.length }));
+        });
+
+        return () => unsubscribe();
     }, []);
 
     const loadStats = async () => {
@@ -27,12 +46,33 @@ const AdminPanel = ({ onClose, currentUser }) => {
                 totalMessages += messagesSnapshot.size;
             }
 
+            // Count deleted messages
+            const deletedSnapshot = await getDocs(collection(db, 'deletedMessages'));
+
             setStats({
                 total: totalMessages,
-                chats: chatsSnapshot.size
+                chats: chatsSnapshot.size,
+                deleted: deletedSnapshot.size
             });
         } catch (error) {
             console.error('Stats error:', error);
+        }
+    };
+
+    const loadDeletedMessages = async () => {
+        try {
+            const deletedSnapshot = await getDocs(collection(db, 'deletedMessages'));
+            const deleted = deletedSnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            setDeletedMessages(deleted.sort((a, b) => {
+                const aTime = a.deletedAt?.toDate ? a.deletedAt.toDate() : new Date(a.deletedAt);
+                const bTime = b.deletedAt?.toDate ? b.deletedAt.toDate() : new Date(b.deletedAt);
+                return bTime - aTime;
+            }));
+        } catch (error) {
+            console.error('Load deleted messages error:', error);
         }
     };
 
@@ -108,7 +148,7 @@ const AdminPanel = ({ onClose, currentUser }) => {
                 </div>
 
                 {/* Stats */}
-                <div className="p-4 grid grid-cols-2 gap-4 border-b border-dark-border">
+                <div className="p-4 grid grid-cols-3 gap-4 border-b border-dark-border">
                     <div className="bg-dark-bg p-4 rounded-lg">
                         <MessageSquare className="text-primary mb-2" size={24} />
                         <div className="text-2xl font-bold">{stats.total}</div>
@@ -119,6 +159,29 @@ const AdminPanel = ({ onClose, currentUser }) => {
                         <div className="text-2xl font-bold">{stats.chats}</div>
                         <div className="text-sm text-gray-400">Sohbet Sayısı</div>
                     </div>
+                    <div className="bg-dark-bg p-4 rounded-lg">
+                        <Trash2 className="text-red-500 mb-2" size={24} />
+                        <div className="text-2xl font-bold">{stats.deleted}</div>
+                        <div className="text-sm text-gray-400">Silinen Mesaj</div>
+                    </div>
+                </div>
+
+                {/* Tabs */}
+                <div className="p-4 border-b border-dark-border flex gap-2">
+                    <Button
+                        variant={activeTab === 'messages' ? 'default' : 'ghost'}
+                        onClick={() => setActiveTab('messages')}
+                        className="flex-1"
+                    >
+                        Aktif Mesajlar
+                    </Button>
+                    <Button
+                        variant={activeTab === 'deleted' ? 'default' : 'ghost'}
+                        onClick={() => setActiveTab('deleted')}
+                        className="flex-1"
+                    >
+                        Silinen Mesajlar ({deletedMessages.length})
+                    </Button>
                 </div>
 
                 {/* Actions */}
@@ -145,31 +208,59 @@ const AdminPanel = ({ onClose, currentUser }) => {
                 <div className="flex-1 overflow-y-auto p-4">
                     {loading ? (
                         <div className="text-center text-gray-400 py-8">Yükleniyor...</div>
-                    ) : allMessages.length === 0 ? (
-                        <div className="text-center text-gray-400 py-8">Mesaj yok</div>
-                    ) : (
-                        <div className="space-y-2">
-                            {allMessages.map(msg => (
-                                <div key={msg.id} className="bg-dark-bg p-3 rounded-lg flex items-start gap-3">
-                                    <div className="flex-1 min-w-0">
-                                        <div className="text-sm text-gray-400 mb-1">
-                                            {msg.senderId.substring(0, 8)}... → {msg.receiverId.substring(0, 8)}...
+                    ) : activeTab === 'messages' ? (
+                        allMessages.length === 0 ? (
+                            <div className="text-center text-gray-400 py-8">Mesaj yok</div>
+                        ) : (
+                            <div className="space-y-2">
+                                {allMessages.map(msg => (
+                                    <div key={msg.id} className="bg-dark-bg p-3 rounded-lg flex items-start gap-3">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-sm text-gray-400 mb-1">
+                                                {msg.senderId.substring(0, 8)}... → {msg.receiverId.substring(0, 8)}...
+                                            </div>
+                                            <div className="truncate">{msg.text || `[${msg.type}]`}</div>
+                                            <div className="text-xs text-gray-500 mt-1">
+                                                {msg.timestamp?.toDate().toLocaleString('tr-TR') || 'Tarih yok'}
+                                            </div>
                                         </div>
-                                        <div className="truncate">{msg.text || `[${msg.type}]`}</div>
-                                        <div className="text-xs text-gray-500 mt-1">
-                                            {msg.timestamp?.toDate().toLocaleString('tr-TR') || 'Tarih yok'}
+                                        <Button
+                                            variant="ghost"
+                                            onClick={() => deleteMessage(msg.chatId, msg.id)}
+                                            className="text-error hover:text-error/80"
+                                        >
+                                            <Trash2 size={16} />
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                        )
+                    ) : (
+                        deletedMessages.length === 0 ? (
+                            <div className="text-center text-gray-400 py-8">Silinen mesaj yok</div>
+                        ) : (
+                            <div className="space-y-2">
+                                {deletedMessages.map(msg => (
+                                    <div key={msg.id} className="bg-dark-bg p-3 rounded-lg border border-red-500/20">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-sm text-red-400 mb-1">
+                                                Silindi - {msg.deletedBy?.substring(0, 8)}... tarafından
+                                            </div>
+                                            <div className="text-sm text-gray-400 mb-1">
+                                                {msg.senderId?.substring(0, 8)}... → {msg.receiverId?.substring(0, 8)}...
+                                            </div>
+                                            <div className="truncate text-gray-300">{msg.text || `[${msg.type}]`}</div>
+                                            <div className="text-xs text-gray-500 mt-1">
+                                                Silinme: {msg.deletedAt?.toDate ? msg.deletedAt.toDate().toLocaleString('tr-TR') : 'Tarih yok'}
+                                            </div>
+                                            <div className="text-xs text-gray-500">
+                                                Orijinal: {msg.timestamp?.toDate ? msg.timestamp.toDate().toLocaleString('tr-TR') : 'Tarih yok'}
+                                            </div>
                                         </div>
                                     </div>
-                                    <Button
-                                        variant="ghost"
-                                        onClick={() => deleteMessage(msg.chatId, msg.id)}
-                                        className="text-error hover:text-error/80"
-                                    >
-                                        <Trash2 size={16} />
-                                    </Button>
-                                </div>
-                            ))}
-                        </div>
+                                ))}
+                            </div>
+                        )
                     )}
                 </div>
             </div>

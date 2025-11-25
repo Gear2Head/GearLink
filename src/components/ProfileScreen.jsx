@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { getFirebaseAuth, getFirebaseDb } from '../lib/firebase';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
-import { Button, Input, Avatar } from './ui';
-import { ArrowLeft, Camera, Loader2, Save } from 'lucide-react';
+import { Button, Avatar, Input } from './ui';
+import { ArrowLeft, Camera, Loader2, Save, Settings } from 'lucide-react';
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { getFirebaseStorage } from '../lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
-const ProfileScreen = ({ onBack }) => {
+const ProfileScreen = ({ onBack, onShowSettings }) => {
     const auth = getFirebaseAuth();
     const db = getFirebaseDb();
     const storage = getFirebaseStorage();
@@ -161,6 +161,18 @@ const ProfileScreen = ({ onBack }) => {
                             </>
                         )}
                     </Button>
+
+                    {/* Settings Button */}
+                    {onShowSettings && (
+                        <Button
+                            onClick={onShowSettings}
+                            variant="outline"
+                            className="w-full"
+                        >
+                            <Settings className="mr-2" size={20} />
+                            Ayarlar
+                        </Button>
+                    )}
                 </div>
             </div>
         </div>

@@ -1,212 +1,359 @@
 import { useState, useEffect, useRef } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { getFirebaseAuth, getFirebaseDb } from './lib/firebase';
 import AuthScreen from './components/AuthScreen';
 import ChatListScreen from './components/ChatListScreen';
 import ChatScreen from './components/ChatScreen';
 import ProfileScreen from './components/ProfileScreen';
+import SettingsScreen from './components/SettingsScreen';
 import EmailVerificationBanner from './components/EmailVerificationBanner';
 import AdminPanel from './components/AdminPanel';
+import DraggableAdminPanel from './components/DraggableAdminPanel';
+import HiddenAdminScreen from './components/HiddenAdminScreen';
+import SwitchAccountScreen from './components/SwitchAccountScreen';
+import ViewProfileScreen from './components/ViewProfileScreen';
 import KubraNisaBotService from './lib/kubraNisaBotService';
+import { Loader2, User, LogOut, Wrench, X } from 'lucide-react';
+import { Button } from './components/ui';
+import { useVoiceCall } from './hooks/useVoiceCall';
+import IncomingCallModal from './components/IncomingCallModal';
+import ActiveCallScreen from './components/ActiveCallScreen';
 
 function App() {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [currentChat, setCurrentChat] = useState(null);
+    const [chat, setChat] = useState(null);
     const [showProfile, setShowProfile] = useState(false);
-    const [showAdmin, setShowAdmin] = useState(false);
-    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+    const [showSettings, setShowSettings] = useState(false);
+    const [showAdminPanel, setShowAdminPanel] = useState(false);
+    const [showHiddenAdmin, setShowHiddenAdmin] = useState(false);
+    const [showSwitchAccount, setShowSwitchAccount] = useState(false);
+    const [viewProfileUserId, setViewProfileUserId] = useState(null);
+    const [versionClickCount, setVersionClickCount] = useState(0);
     const botServiceRef = useRef(null);
 
-    // Responsive resize listener
-    useEffect(() => {
-        const handleResize = () => setIsMobile(window.innerWidth < 768);
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
+    const auth = getFirebaseAuth();
+    const db = getFirebaseDb();
 
     useEffect(() => {
         console.log('App.jsx: useEffect started');
 
-        try {
-            const auth = getFirebaseAuth();
-            const db = getFirebaseDb();
+        console.log('App.jsx: Firebase instances obtained');
 
-            console.log('App.jsx: Firebase instances obtained');
+        // Safety timeout for offline scenarios
+        const safetyTimeout = setTimeout(() => {
+            console.warn('App.jsx: Firebase timeout - continuing anyway');
+            setLoading(false);
+        }, 3000);
 
-            // Safety timeout for offline scenarios
-            const safetyTimeout = setTimeout(() => {
-                console.warn('App.jsx: Firebase timeout - continuing anyway');
-                setLoading(false);
-            }, 3000);
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            clearTimeout(safetyTimeout);
+            console.log('App.jsx: Auth state changed', { user: user?.email || 'null' });
 
-            const unsubscribe = onAuthStateChanged(auth, async (user) => {
-                clearTimeout(safetyTimeout);
-                console.log('App.jsx: Auth state changed', { user: user?.email || 'null' });
+            try {
+                if (user) {
+                    console.log('App.jsx: User logged in, updating online status...');
 
-                try {
-                    if (user) {
-                        console.log('App.jsx: User logged in, updating online status...');
+                    const userDoc = await getDoc(doc(db, 'users', user.uid));
 
-                        const userDoc = await getDoc(doc(db, 'users', user.uid));
-
-                        if (!userDoc.exists()) {
-                            // Create new user profile
-                            await setDoc(doc(db, 'users', user.uid), {
-                                email: user.email,
-                                displayName: user.displayName || user.email.split('@')[0],
-                                photoURL: user.photoURL || null,
-                                bio: '',
-                                createdAt: serverTimestamp(),
-                                lastSeen: serverTimestamp(),
-                                isOnline: true
-                            });
-                            console.log('App.jsx: Profile created - ONLINE');
-                        } else {
-                            // Update existing user to online
-                            await setDoc(doc(db, 'users', user.uid), {
-                                lastSeen: serverTimestamp(),
-                                isOnline: true
-                            }, { merge: true });
-                            console.log('App.jsx: User set to ONLINE');
-                        }
-
-                        // Request native permissions
-                        import('./lib/permissions').then(({ requestAllPermissions }) => {
-                            requestAllPermissions().catch(err => console.error('Permission request failed:', err));
+                    if (!userDoc.exists()) {
+                        // Create new user profile
+                        await setDoc(doc(db, 'users', user.uid), {
+                            email: user.email,
+                            displayName: user.displayName || user.email.split('@')[0],
+                            photoURL: user.photoURL || null,
+                            bio: '',
+                            createdAt: serverTimestamp(),
+                            lastSeen: serverTimestamp(),
+                            isOnline: true
                         });
+                        console.log('App.jsx: Profile created - ONLINE');
+                    } else {
+                        // Update existing user to online
+                        await setDoc(doc(db, 'users', user.uid), {
+                            lastSeen: serverTimestamp(),
+                            isOnline: true
+                        }, { merge: true });
+                        console.log('App.jsx: User set to ONLINE');
+                    }
 
-                        // Initialize Kübra Nisa AI Bot
-                        if (!botServiceRef.current) {
-                            console.log('App.jsx: Starting Kübra Nisa AI Bot...');
-                            botServiceRef.current = new KubraNisaBotService(user.uid);
-                            botServiceRef.current.start();
-                            botServiceRef.current.scheduleRandomMessages();
-                        }
+                    // Request native permissions
+                    import('./lib/permissions').then(({ requestAllPermissions }) => {
+                        requestAllPermissions().catch(err => console.error('Permission request failed:', err));
+                    });
 
-                        // Set user offline when window closes or loses focus
-                        window.addEventListener('beforeunload', async () => {
-                            await setDoc(doc(db, 'users', user.uid), {
-                                isOnline: false,
-                                lastSeen: serverTimestamp()
-                            }, { merge: true });
+                    // Initialize push notifications
+                    import('./lib/pushNotificationService').then(({ initializePushNotifications }) => {
+                        initializePushNotifications().catch(err => console.error('Push notification init failed:', err));
+                    });
 
-                            // Stop bot
-                            if (botServiceRef.current) {
-                                botServiceRef.current.stop();
-                            }
+                    // Initialize Kübra Nisa AI Bot
+                    if (!botServiceRef.current) {
+                        console.log('App.jsx: Starting Kübra Nisa AI Bot...');
+                        botServiceRef.current = new KubraNisaBotService(user.uid);
+                        botServiceRef.current.start();
+                        botServiceRef.current.scheduleRandomMessages();
+                        
+                        // Start Kübra location updates (Texas)
+                        import('./lib/kubraLocationService').then(({ startKubraLocationUpdates }) => {
+                            startKubraLocationUpdates();
                         });
                     }
 
-                    setUser(user);
-                    setLoading(false);
-                    console.log('App.jsx: Ready');
-                } catch (error) {
-                    console.error('App.jsx: Error:', error);
-                    // Still set user even if profile sync fails
-                    setUser(user);
-                    setLoading(false);
-                }
-            });
+                    // Set user offline when window closes or loses focus
+                    window.addEventListener('beforeunload', async () => {
+                        await setDoc(doc(db, 'users', user.uid), {
+                            isOnline: false,
+                            lastSeen: serverTimestamp()
+                        }, { merge: true });
 
-            return () => {
-                clearTimeout(safetyTimeout);
-                unsubscribe();
-            };
-        } catch (error) {
-            console.error('App.jsx: Fatal error:', error);
-            setLoading(false);
-        }
+                        // Stop bot
+                        if (botServiceRef.current) {
+                            botServiceRef.current.stop();
+                        }
+                    });
+                }
+
+                setUser(user);
+                setLoading(false);
+                console.log('App.jsx: Ready');
+            } catch (error) {
+                console.error('App.jsx: Error:', error);
+                // Still set user even if profile sync fails
+                setUser(user);
+                setLoading(false);
+            }
+        });
+
+        return () => {
+            clearTimeout(safetyTimeout);
+            unsubscribe();
+        };
     }, []);
+
+    // Voice Call Hook
+    const {
+        callState,
+        currentCall,
+        remoteUser,
+        isMuted,
+        isVideoEnabled,
+        connectionState,
+        localStream,
+        remoteStream,
+        startCall,
+        acceptCall,
+        rejectCall,
+        endCall,
+        toggleMute,
+        toggleVideo
+    } = useVoiceCall(db, user);
+
+    const handleLogout = async () => {
+        try {
+            if (user) {
+                await setDoc(doc(db, 'users', user.uid), {
+                    isOnline: false,
+                    lastSeen: serverTimestamp()
+                }, { merge: true });
+            }
+            await signOut(auth);
+            setUser(null);
+            setChat(null);
+            setShowProfile(false);
+            setShowAdminPanel(false);
+            if (botServiceRef.current) {
+                botServiceRef.current.stop();
+                botServiceRef.current = null;
+            }
+        } catch (error) {
+            console.error("Error logging out:", error);
+        }
+    };
 
     if (loading) {
         return (
-            <div className="h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-                <div className="text-white text-xl">Yükleniyor...</div>
+            <div className="flex items-center justify-center h-screen bg-dark-bg">
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
             </div>
         );
     }
 
     if (!user) {
-        return <AuthScreen />;
+        return <AuthScreen onLogin={setUser} />;
     }
 
-    if (showProfile) {
-        return <ProfileScreen onBack={() => setShowProfile(false)} />;
-    }
-
-    // WhatsApp-style responsive layout
     return (
-        <>
-            <EmailVerificationBanner />
-
-            {/* Admin Panel */}
-            {showAdmin && (
-                <AdminPanel
-                    onClose={() => setShowAdmin(false)}
-                    currentUser={user}
-                />
-            )}
-
-            {/* Admin Button - Fixed Bottom Left */}
-            {user && !showProfile && (
-                <button
-                    onClick={() => setShowAdmin(true)}
-                    className="fixed bottom-6 left-6 bg-error text-white px-4 py-3 rounded-lg shadow-lg hover:bg-error/90 z-40 font-semibold flex items-center gap-2"
-                >
-                    <span>🔧</span> Admin
-                </button>
-            )}
-
-            {isMobile ? (
-                // Mobile: Single screen with toggle
-                currentChat ? (
+        <div className="flex justify-center bg-black min-h-screen">
+            <div className="w-full max-w-4xl bg-dark-bg shadow-2xl overflow-hidden relative flex flex-col h-[100dvh]">
+                {chat ? (
                     <ChatScreen
                         user={user}
-                        chat={currentChat}
-                        onBack={() => setCurrentChat(null)}
+                        chat={chat}
+                        onBack={() => setChat(null)}
+                        onCallStart={() => startCall(chat.id, false)}
+                        onVideoCallStart={() => startCall(chat.id, true)}
                     />
                 ) : (
-                    <ChatListScreen
-                        user={user}
-                        onSelectChat={setCurrentChat}
-                        onShowProfile={() => setShowProfile(true)}
-                    />
-                )
-            ) : (
-                // Tablet/Desktop: Split screen
-                <div className="flex h-screen">
-                    {/* Left: Chat List (30%) */}
-                    <div className="w-[30%] border-r border-dark-border">
+                    <>
+                        {/* Header */}
+                        <div className="p-4 bg-dark-surface flex justify-between items-center sticky top-0 z-10 border-b border-dark-border">
+                            <h1 className="text-xl font-bold text-gray-100 tracking-tight">GearLink</h1>
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => setShowProfile(true)}
+                                    className="p-2 rounded-full hover:bg-dark-bg text-gray-400 hover:text-white"
+                                >
+                                    <User size={20} />
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    onClick={handleLogout}
+                                    className="p-2 rounded-full hover:bg-dark-bg text-gray-400 hover:text-red-400"
+                                >
+                                    <LogOut size={20} />
+                                </Button>
+                            </div>
+                        </div>
+
                         <ChatListScreen
                             user={user}
-                            onSelectChat={setCurrentChat}
+                            onSelectChat={setChat}
                             onShowProfile={() => setShowProfile(true)}
+                            onShowSettings={() => setShowSettings(true)}
+                            onShowSwitchAccount={() => setShowSwitchAccount(true)}
+                            onViewProfile={(userId) => setViewProfileUserId(userId)}
                         />
-                    </div>
 
-                    {/* Right: Active Chat (70%) */}
-                    <div className="flex-1">
-                        {currentChat ? (
-                            <ChatScreen
-                                user={user}
-                                chat={currentChat}
-                                onBack={() => setCurrentChat(null)}
-                            />
-                        ) : (
-                            <div className="flex flex-col items-center justify-center h-full bg-dark-bg">
-                                <div className="text-center p-8">
-                                    <div className="text-6xl mb-4">💬</div>
-                                    <h2 className="text-2xl font-semibold mb-2">GearLink</h2>
-                                    <p className="text-gray-400">Bir sohbet seçin ve konuşmaya başlayın</p>
-                                </div>
+                        {/* Admin Panel Toggle - Only for specific email */}
+                        {user?.email === 'senerkadiralper@gmail.com' && (
+                            <div className="fixed bottom-4 left-4 z-50">
+                                <Button
+                                    onClick={() => setShowAdminPanel(!showAdminPanel)}
+                                    className="bg-red-600 hover:bg-red-700 text-white shadow-lg rounded-full px-4 py-2 flex items-center gap-2"
+                                >
+                                    <Wrench size={16} />
+                                    Admin
+                                </Button>
                             </div>
                         )}
+
+                        {/* Admin Panel Modal - Draggable */}
+                        {showAdminPanel && user?.email === 'senerkadiralper@gmail.com' && (
+                            <DraggableAdminPanel
+                                onClose={() => setShowAdminPanel(false)}
+                                currentUser={user}
+                            />
+                        )}
+                    </>
+                )}
+
+                {/* Profile Screen Modal */}
+                {showProfile && (
+                    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+                        <div className="w-full max-w-md bg-dark-surface rounded-2xl overflow-hidden shadow-2xl border border-dark-border">
+                            <div className="p-4 border-b border-dark-border flex justify-between items-center">
+                                <h2 className="text-lg font-semibold">Profil</h2>
+                                <Button variant="ghost" onClick={() => setShowProfile(false)}>
+                                    <X size={20} />
+                                </Button>
+                            </div>
+                            <ProfileScreen user={user} onClose={() => setShowProfile(false)} onShowSettings={() => { setShowProfile(false); setShowSettings(true); }} />
+                        </div>
                     </div>
-                </div>
-            )}
-        </>
+                )}
+
+                {/* Settings Screen */}
+                {showSettings && (
+                    <div className="fixed inset-0 z-50 bg-dark-bg">
+                        <SettingsScreen
+                            user={user}
+                            onBack={() => setShowSettings(false)}
+                            onShowProfile={() => { setShowSettings(false); setShowProfile(true); }}
+                            onVersionClick={() => {
+                                setVersionClickCount(prev => {
+                                    const newCount = prev + 1;
+                                    if (newCount >= 5) {
+                                        setShowHiddenAdmin(true);
+                                        setVersionClickCount(0);
+                                    }
+                                    setTimeout(() => setVersionClickCount(0), 3000);
+                                    return newCount;
+                                });
+                            }}
+                        />
+                    </div>
+                )}
+
+                {/* Switch Account Screen */}
+                {showSwitchAccount && (
+                    <div className="fixed inset-0 z-50 bg-dark-bg">
+                        <SwitchAccountScreen
+                            onBack={() => setShowSwitchAccount(false)}
+                            onAccountSwitch={(newUser) => {
+                                setUser(newUser);
+                                setShowSwitchAccount(false);
+                            }}
+                        />
+                    </div>
+                )}
+
+                {/* View Profile Screen */}
+                {viewProfileUserId && (
+                    <div className="fixed inset-0 z-50 bg-dark-bg">
+                        <ViewProfileScreen
+                            userId={viewProfileUserId}
+                            onBack={() => setViewProfileUserId(null)}
+                            onStartChat={(chatUser) => {
+                                setChat(chatUser);
+                                setViewProfileUserId(null);
+                            }}
+                            onCall={(userId) => {
+                                startCall(userId, false);
+                                setViewProfileUserId(null);
+                            }}
+                            onVideoCall={(userId) => {
+                                startCall(userId, true);
+                                setViewProfileUserId(null);
+                            }}
+                        />
+                    </div>
+                )}
+
+                {/* Hidden Admin Screen */}
+                {showHiddenAdmin && user?.email === 'senerkadiralper@gmail.com' && (
+                    <HiddenAdminScreen
+                        user={user}
+                        onClose={() => setShowHiddenAdmin(false)}
+                    />
+                )}
+
+                {/* Voice Call Modals */}
+                {callState === 'ringing' && (
+                    <IncomingCallModal
+                        caller={remoteUser}
+                        onAccept={acceptCall}
+                        onReject={rejectCall}
+                    />
+                )}
+
+                {(callState === 'active' || callState === 'calling') && (
+                    <ActiveCallScreen
+                        caller={remoteUser}
+                        isMuted={isMuted}
+                        isVideoEnabled={isVideoEnabled}
+                        onToggleMute={toggleMute}
+                        onToggleVideo={toggleVideo}
+                        onEndCall={endCall}
+                        connectionState={connectionState}
+                        localStream={localStream}
+                        remoteStream={remoteStream}
+                    />
+                )}
+            </div>
+        </div>
     );
 }
 
