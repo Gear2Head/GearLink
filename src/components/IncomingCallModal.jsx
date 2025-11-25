@@ -2,7 +2,7 @@ import React from 'react';
 import { Phone, PhoneOff } from 'lucide-react';
 import { Button, Avatar } from './ui';
 
-export const IncomingCallModal = ({ caller, onAccept, onReject }) => {
+const IncomingCallModal = ({ caller, onAccept, onReject }) => {
     if (!caller) return null;
 
     return (
@@ -45,3 +45,5 @@ export const IncomingCallModal = ({ caller, onAccept, onReject }) => {
         </div>
     );
 };
+
+export default IncomingCallModal;

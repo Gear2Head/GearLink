@@ -15,7 +15,7 @@ import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capa
 import { handleError, ErrorCodes, AppError } from '../lib/errorHandler';
 import { CallButton } from './CallButton';
 
-const ChatScreen = ({ user, chat, onBack, onCallStart, onVideoCallStart }) => {
+const ChatScreen = ({ user, chat, onBack, onCallStart, onVideoCallStart, onViewProfile }) => {
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [uploading, setUploading] = useState(false);
@@ -513,11 +513,14 @@ const ChatScreen = ({ user, chat, onBack, onCallStart, onVideoCallStart }) => {
                                 <ArrowLeft size={20} />
                             </Button>
 
-                            <div className="relative">
+                            <div 
+                                className="relative cursor-pointer"
+                                onClick={() => onViewProfile && onViewProfile(chat.id)}
+                            >
                                 <Avatar
                                     src={chat.photoURL}
                                     fallback={chat.name ? chat.name[0] : '?'}
-                                    className="w-10 h-10 ring-2 ring-dark-border"
+                                    className="w-10 h-10 ring-2 ring-dark-border hover:ring-primary transition-all"
                                 />
                                 {chat.isOnline && (
                                     <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-dark-surface"></div>
@@ -634,39 +637,81 @@ const ChatScreen = ({ user, chat, onBack, onCallStart, onVideoCallStart }) => {
             </div>
 
             {/* Input Area */}
-            <div className="p-2 bg-dark-surface border-t border-dark-border">
-                {/* Attachment Menu */}
+            <div className="p-2 bg-dark-surface border-t border-dark-border relative">
+                {/* Attachment Menu - Above the + button */}
                 {showAttachmentMenu && (
-                    <div className="absolute bottom-20 right-16 bg-dark-surface border border-dark-border rounded-xl shadow-2xl p-4 grid grid-cols-3 gap-4 animate-in slide-in-from-bottom-5 z-20 w-72">
-                        <button onClick={() => fileInputRef.current?.click()} className="flex flex-col items-center gap-2 p-2 hover:bg-dark-bg rounded-lg transition-colors">
-                            <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-500">
-                                <ImageIcon size={24} />
+                    <div className="absolute bottom-full right-4 mb-2 bg-dark-surface border border-dark-border rounded-xl shadow-2xl p-3 grid grid-cols-3 gap-3 animate-in slide-in-from-bottom-5 z-20 w-64">
+                        <button 
+                            onClick={() => {
+                                fileInputRef.current?.click();
+                                setShowAttachmentMenu(false);
+                            }} 
+                            className="flex flex-col items-center gap-2 p-3 hover:bg-dark-bg rounded-lg transition-colors"
+                        >
+                            <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-500">
+                                <ImageIcon size={20} />
                             </div>
-                            <span className="text-xs text-gray-300">Galeri</span>
+                            <span className="text-xs text-gray-300">Fotoğraf</span>
                         </button>
-                        <button onClick={takePicture} className="flex flex-col items-center gap-2 p-2 hover:bg-dark-bg rounded-lg transition-colors">
-                            <div className="w-12 h-12 rounded-full bg-pink-500/20 flex items-center justify-center text-pink-500">
-                                <Camera size={24} />
+                        <button 
+                            onClick={() => {
+                                fileMultiInputRef.current?.click();
+                                setShowAttachmentMenu(false);
+                            }} 
+                            className="flex flex-col items-center gap-2 p-3 hover:bg-dark-bg rounded-lg transition-colors"
+                        >
+                            <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500">
+                                <Paperclip size={20} />
                             </div>
-                            <span className="text-xs text-gray-300">Kamera</span>
+                            <span className="text-xs text-gray-300">Dosya</span>
                         </button>
-                        <button onClick={() => fileMultiInputRef.current?.click()} className="flex flex-col items-center gap-2 p-2 hover:bg-dark-bg rounded-lg transition-colors">
-                            <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500">
-                                <FileText size={24} />
+                        <button 
+                            onClick={() => {
+                                setShowVoiceRecorder(true);
+                                setShowAttachmentMenu(false);
+                            }} 
+                            className="flex flex-col items-center gap-2 p-3 hover:bg-dark-bg rounded-lg transition-colors"
+                        >
+                            <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center text-red-500">
+                                <Mic size={20} />
                             </div>
-                            <span className="text-xs text-gray-300">Belge</span>
+                            <span className="text-xs text-gray-300">Sesli Mesaj</span>
                         </button>
-                        <button onClick={() => setShowLocationPicker(true)} className="flex flex-col items-center gap-2 p-2 hover:bg-dark-bg rounded-lg transition-colors">
-                            <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center text-green-500">
-                                <MapPin size={24} />
+                        <button 
+                            onClick={() => {
+                                setShowLocationPicker(true);
+                                setShowAttachmentMenu(false);
+                            }} 
+                            className="flex flex-col items-center gap-2 p-3 hover:bg-dark-bg rounded-lg transition-colors"
+                        >
+                            <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center text-green-500">
+                                <MapPin size={20} />
                             </div>
                             <span className="text-xs text-gray-300">Konum</span>
                         </button>
-                        <button onClick={() => setShowPollCreator(true)} className="flex flex-col items-center gap-2 p-2 hover:bg-dark-bg rounded-lg transition-colors">
-                            <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-500">
-                                <BarChart size={24} />
+                        <button 
+                            onClick={() => {
+                                setShowPollCreator(true);
+                                setShowAttachmentMenu(false);
+                            }} 
+                            className="flex flex-col items-center gap-2 p-3 hover:bg-dark-bg rounded-lg transition-colors"
+                        >
+                            <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-500">
+                                <BarChart size={20} />
                             </div>
                             <span className="text-xs text-gray-300">Anket</span>
+                        </button>
+                        <button 
+                            onClick={() => {
+                                setShowEmojiPicker(!showEmojiPicker);
+                                setShowAttachmentMenu(false);
+                            }} 
+                            className="flex flex-col items-center gap-2 p-3 hover:bg-dark-bg rounded-lg transition-colors"
+                        >
+                            <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-500">
+                                <Smile size={20} />
+                            </div>
+                            <span className="text-xs text-gray-300">Emoji</span>
                         </button>
                     </div>
                 )}
@@ -685,27 +730,20 @@ const ChatScreen = ({ user, chat, onBack, onCallStart, onVideoCallStart }) => {
                 )}
 
                 <form onSubmit={handleSend} className="flex items-end gap-2 max-w-4xl mx-auto">
+                    {/* Camera Button - Far Left */}
                     <Button
                         type="button"
                         variant="ghost"
                         size="icon"
-                        onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
+                        onClick={takePicture}
                         className="text-gray-400 hover:text-white mb-1"
+                        title="Kamera"
                     >
-                        <Plus size={24} className={cn("transition-transform duration-200", showAttachmentMenu && "rotate-45")} />
+                        <Camera size={24} />
                     </Button>
 
+                    {/* Input Field - Wide */}
                     <div className="flex-1 bg-dark-bg rounded-2xl flex items-end p-2 border border-dark-border focus-within:border-primary/50 transition-colors">
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                            className="text-gray-400 hover:text-yellow-400 mb-0.5"
-                        >
-                            <Smile size={24} />
-                        </Button>
-
                         <textarea
                             value={newMessage}
                             onChange={(e) => handleTyping(e.target.value)}
@@ -715,8 +753,8 @@ const ChatScreen = ({ user, chat, onBack, onCallStart, onVideoCallStart }) => {
                                     handleSend(e);
                                 }
                             }}
-                            placeholder="Mesaj yazın..."
-                            className="flex-1 bg-transparent border-none focus:ring-0 text-gray-100 placeholder-gray-500 min-h-[40px] max-h-[120px] resize-none py-2 px-2 scrollbar-thin scrollbar-thumb-gray-700"
+                            placeholder="Bir mesaj yazın..."
+                            className="flex-1 bg-transparent border-none focus:ring-0 text-gray-100 placeholder-gray-500 min-h-[40px] max-h-[120px] resize-none py-2 px-3 scrollbar-thin scrollbar-thumb-gray-700"
                             rows={1}
                             inputMode="text"
                             autoCapitalize="sentences"
@@ -731,17 +769,20 @@ const ChatScreen = ({ user, chat, onBack, onCallStart, onVideoCallStart }) => {
                             >
                                 {uploading ? <Loader2 className="animate-spin" /> : <Send size={20} />}
                             </Button>
-                        ) : (
-                            <Button
-                                type="button"
-                                size="icon"
-                                onClick={() => setShowVoiceRecorder(!showVoiceRecorder)}
-                                className="text-gray-400 hover:text-white hover:bg-dark-surface rounded-full w-10 h-10 mb-0.5"
-                            >
-                                <Mic size={24} />
-                            </Button>
-                        )}
+                        ) : null}
                     </div>
+
+                    {/* Plus Button - Far Right */}
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
+                        className="text-gray-400 hover:text-white mb-1 relative"
+                        title="Ekler"
+                    >
+                        <Plus size={24} className={cn("transition-transform duration-200", showAttachmentMenu && "rotate-45")} />
+                    </Button>
                 </form>
 
                 {/* Hidden Inputs */}

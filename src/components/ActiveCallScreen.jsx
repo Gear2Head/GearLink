@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Volume2, PhoneOff, User, Video, VideoOff } from 'lucide-react';
 import { Button, Avatar } from './ui';
 
-export const ActiveCallScreen = ({
+const ActiveCallScreen = ({
     caller,
     isMuted,
     isVideoEnabled = false,
@@ -74,7 +74,7 @@ export const ActiveCallScreen = ({
                 </div>
             ) : (
                 // Audio Call Layout
-                <>
+                <div className="relative w-full h-full">
                     <div className="absolute top-0 left-0 w-full h-full overflow-hidden opacity-20 pointer-events-none">
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary/30 rounded-full blur-3xl animate-pulse"></div>
                     </div>
@@ -94,12 +94,13 @@ export const ActiveCallScreen = ({
                                 {connectionState === 'connected' ? 'Sesli Arama' : 'Bağlanıyor...'}
                             </p>
                         </div>
-                </>
+                    </div>
+                </div>
             )}
 
             {/* Controls */}
             {isVideoEnabled ? (
-                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-4 bg-black/50 backdrop-blur-sm rounded-full px-4 py-2">
+                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-4 bg-black/50 backdrop-blur-sm rounded-full px-4 py-2 z-20">
                     <Button
                         onClick={onToggleMute}
                         className={`w-14 h-14 rounded-full transition-all duration-300 ${isMuted ? 'bg-white text-dark-bg' : 'bg-dark-surface text-white hover:bg-dark-border'}`}
@@ -125,8 +126,8 @@ export const ActiveCallScreen = ({
                     </Button>
                 </div>
             ) : (
-                <div className="relative z-10 flex flex-col items-center w-full max-w-md px-6">
-                    <div className="flex gap-8 mb-12 items-center">
+                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center z-20">
+                    <div className="flex gap-8 mb-6 items-center">
                         <div className="flex flex-col items-center gap-2">
                             <Button
                                 onClick={onToggleMute}
@@ -156,3 +157,5 @@ export const ActiveCallScreen = ({
         </div>
     );
 };
+
+export default ActiveCallScreen;

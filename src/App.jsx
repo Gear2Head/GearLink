@@ -194,6 +194,7 @@ function App() {
                         onBack={() => setChat(null)}
                         onCallStart={() => startCall(chat.id, false)}
                         onVideoCallStart={() => startCall(chat.id, true)}
+                        onViewProfile={(userId) => setViewProfileUserId(userId)}
                     />
                 ) : (
                     <>
