@@ -406,24 +406,32 @@ const ChatScreen = ({ user, chat, onBack }) => {
                 <Button variant="ghost" onClick={onBack} className="px-2">
                     <ArrowLeft size={20} />
                 </Button>
-                <Avatar fallback={chat.name[0]} src={chat.photoURL} className="w-8 h-8 bg-gradient-to-br from-primary to-secondary" />
-                <div className="flex-1">
-                    <h2 className="font-semibold text-sm">{chat.name}</h2>
-                    {otherUserTyping ? (
-                        <span className="text-xs text-primary flex items-center gap-1">
-                            <span className="w-1 h-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
-                            <span className="w-1 h-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
-                            <span className="w-1 h-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
-                            yazıyor
-                        </span>
-                    ) : chat.isOnline ? (
-                        <span className="text-xs text-green-400 flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                            Çevrimiçi
-                        </span>
-                    ) : (
-                        <span className="text-xs text-gray-400">Çevrimdışı</span>
-                    )}
+                <div
+                    className="flex items-center gap-3 flex-1 cursor-pointer hover:bg-dark-hover/30 rounded-lg p-1 -m-1 transition"
+                    onClick={() => {
+                        const info = `İsim: ${chat.name}\nDurum: ${chat.isOnline ? 'Çevrimiçi' : 'Çevrimdışı'}\nID: ${chat.id}`;
+                        alert(info);
+                    }}
+                >
+                    <Avatar fallback={chat.name[0]} src={chat.photoURL} className="w-8 h-8 bg-gradient-to-br from-primary to-secondary" />
+                    <div className="flex-1">
+                        <h2 className="font-semibold text-sm">{chat.name}</h2>
+                        {otherUserTyping ? (
+                            <span className="text-xs text-primary flex items-center gap-1">
+                                <span className="w-1 h-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
+                                <span className="w-1 h-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
+                                <span className="w-1 h-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
+                                yazıyor
+                            </span>
+                        ) : chat.isOnline ? (
+                            <span className="text-xs text-green-400 flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                                Çevrimiçi
+                            </span>
+                        ) : (
+                            <span className="text-xs text-gray-400">Çevrimdışı</span>
+                        )}
+                    </div>
                 </div>
                 {/* Call Buttons */}
                 <div className="flex gap-2">
