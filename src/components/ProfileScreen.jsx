@@ -161,6 +161,20 @@ const ProfileScreen = ({ onBack }) => {
                             </>
                         )}
                     </Button>
+
+                    {/* Settings Button */}
+                    <Button
+                        onClick={() => {
+                            // Will be handled by App.jsx
+                            if (window.openSettings) {
+                                window.openSettings();
+                            }
+                        }}
+                        variant="outline"
+                        className="w-full mt-3"
+                    >
+                        ⚙️ Ayarlar
+                    </Button>
                 </div>
             </div>
         </div>

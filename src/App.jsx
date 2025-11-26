@@ -6,6 +6,7 @@ import AuthScreen from './components/AuthScreen';
 import ChatListScreen from './components/ChatListScreen';
 import ChatScreen from './components/ChatScreen';
 import ProfileScreen from './components/ProfileScreen';
+import SettingsScreen from './components/SettingsScreen';
 import EmailVerificationBanner from './components/EmailVerificationBanner';
 import AdminPanel from './components/AdminPanel';
 import KubraNisaBotService from './lib/kubraNisaBotService';
@@ -15,6 +16,7 @@ function App() {
     const [loading, setLoading] = useState(true);
     const [currentChat, setCurrentChat] = useState(null);
     const [showProfile, setShowProfile] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
     const [showAdmin, setShowAdmin] = useState(false);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     const botServiceRef = useRef(null);
@@ -133,7 +135,16 @@ function App() {
     }
 
     if (showProfile) {
+        // Setup window.openSettings for ProfileScreen
+        window.openSettings = () => {
+            setShowProfile(false);
+            setShowSettings(true);
+        };
         return <ProfileScreen onBack={() => setShowProfile(false)} />;
+    }
+
+    if (showSettings) {
+        return <SettingsScreen onBack={() => setShowSettings(false)} />;
     }
 
     // WhatsApp-style responsive layout
