@@ -6,6 +6,7 @@ import AuthScreen from './components/AuthScreen';
 import ChatListScreen from './components/ChatListScreen';
 import ChatScreen from './components/ChatScreen';
 import ProfileScreen from './components/ProfileScreen';
+import ViewProfileScreen from './components/ViewProfileScreen';
 import SettingsScreen from './components/SettingsScreen';
 import EmailVerificationBanner from './components/EmailVerificationBanner';
 import AdminPanel from './components/AdminPanel';
@@ -15,6 +16,7 @@ function App() {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [currentChat, setCurrentChat] = useState(null);
+    const [viewingProfile, setViewingProfile] = useState(null);
     const [showProfile, setShowProfile] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     const [showAdmin, setShowAdmin] = useState(false);
@@ -143,6 +145,10 @@ function App() {
         return <ProfileScreen onBack={() => setShowProfile(false)} />;
     }
 
+    if (viewingProfile) {
+        return <ViewProfileScreen user={viewingProfile} onBack={() => setViewingProfile(null)} />;
+    }
+
 
     if (showSettings) {
         // Setup window.openAdminPanel for SettingsScreen
@@ -183,6 +189,7 @@ function App() {
                         user={user}
                         chat={currentChat}
                         onBack={() => setCurrentChat(null)}
+                        onViewProfile={setViewingProfile}
                     />
                 ) : (
                     <ChatListScreen
@@ -210,6 +217,7 @@ function App() {
                                 user={user}
                                 chat={currentChat}
                                 onBack={() => setCurrentChat(null)}
+                                onViewProfile={setViewingProfile}
                             />
                         ) : (
                             <div className="flex flex-col items-center justify-center h-full bg-dark-bg">

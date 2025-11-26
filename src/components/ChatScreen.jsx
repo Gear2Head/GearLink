@@ -409,8 +409,7 @@ const ChatScreen = ({ user, chat, onBack }) => {
                 <div
                     className="flex items-center gap-3 flex-1 cursor-pointer hover:bg-dark-hover/30 rounded-lg p-1 -m-1 transition"
                     onClick={() => {
-                        const info = `İsim: ${chat.name}\nDurum: ${chat.isOnline ? 'Çevrimiçi' : 'Çevrimdışı'}\nID: ${chat.id}`;
-                        alert(info);
+                        onViewProfile(chat);
                     }}
                 >
                     <Avatar fallback={chat.name[0]} src={chat.photoURL} className="w-8 h-8 bg-gradient-to-br from-primary to-secondary" />
