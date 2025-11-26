@@ -8,6 +8,7 @@ const SettingsScreen = ({ onBack }) => {
 
     const handleVersionTap = () => {
         const now = Date.now();
+        console.log('SettingsScreen: Tap detected', { tapCount, timeDiff: now - lastTapTime });
 
         // Reset if more than 2 seconds between taps
         if (now - lastTapTime > 2000) {
@@ -20,9 +21,12 @@ const SettingsScreen = ({ onBack }) => {
 
         // Open admin panel after 5 taps
         if (tapCount + 1 >= 5) {
+            console.log('SettingsScreen: Unlocking admin panel');
             setTapCount(0);
             if (window.openAdminPanel) {
                 window.openAdminPanel();
+            } else {
+                console.error('SettingsScreen: window.openAdminPanel is not defined');
             }
         }
     };
@@ -118,7 +122,7 @@ const SettingsScreen = ({ onBack }) => {
                         <h3 className="text-sm font-semibold">Hakkında</h3>
                     </div>
                     <div
-                        className="bg-dark-surface rounded-lg p-4 cursor-pointer active:bg-dark-hover transition"
+                        className="bg-dark-surface rounded-lg p-4 cursor-pointer active:bg-dark-hover transition select-none"
                         onClick={handleVersionTap}
                     >
                         <p className="text-sm text-gray-300 mb-2">GearLink</p>
@@ -136,4 +140,3 @@ const SettingsScreen = ({ onBack }) => {
 };
 
 export default SettingsScreen;
-

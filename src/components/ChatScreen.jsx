@@ -409,6 +409,7 @@ const ChatScreen = ({ user, chat, onBack }) => {
                 <div
                     className="flex items-center gap-3 flex-1 cursor-pointer hover:bg-dark-hover/30 rounded-lg p-1 -m-1 transition"
                     onClick={() => {
+                        console.log('ChatScreen: Header clicked', chat);
                         onViewProfile(chat);
                     }}
                 >
@@ -437,7 +438,7 @@ const ChatScreen = ({ user, chat, onBack }) => {
                     <Button
                         variant="ghost"
                         className="p-2 rounded-full hover:bg-dark-hover"
-                        onClick={() => console.log('Voice call:', chat.name)}
+                        onClick={() => alert("Sesli arama özelliği yakında eklenecek!")}
                         title="Sesli Arama"
                     >
                         <Phone size={20} />
@@ -445,7 +446,7 @@ const ChatScreen = ({ user, chat, onBack }) => {
                     <Button
                         variant="ghost"
                         className="p-2 rounded-full hover:bg-dark-hover"
-                        onClick={() => console.log('Video call:', chat.name)}
+                        onClick={() => alert("Görüntülü arama özelliği yakında eklenecek!")}
                         title="Görüntülü Arama"
                     >
                         <Video size={20} />
