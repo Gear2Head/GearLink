@@ -143,7 +143,13 @@ function App() {
         return <ProfileScreen onBack={() => setShowProfile(false)} />;
     }
 
+
     if (showSettings) {
+        // Setup window.openAdminPanel for SettingsScreen
+        window.openAdminPanel = () => {
+            setShowSettings(false);
+            setShowAdmin(true);
+        };
         return <SettingsScreen onBack={() => setShowSettings(false)} />;
     }
 
