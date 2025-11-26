@@ -4,7 +4,7 @@ import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, s
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Button, Input, Avatar } from './ui';
 import { cn } from '../lib/utils';
-import { Send, Image as ImageIcon, ArrowLeft, Loader2, Smile, Edit, Trash2, Reply, MoreVertical, X, FileText, Download, Paperclip, Check, CheckCheck, Mic, MapPin, BarChart, Play, Pause, Camera, Plus } from 'lucide-react';
+import { Send, Image as ImageIcon, ArrowLeft, Loader2, Smile, Edit, Trash2, Reply, MoreVertical, X, FileText, Download, Paperclip, Check, CheckCheck, Mic, MapPin, BarChart, Play, Pause, Camera, Plus, Phone, Video } from 'lucide-react';
 import { firebaseConfig } from '../firebaseConfig';
 import EmojiPicker from 'emoji-picker-react';
 import VoiceMessageRecorder from './VoiceMessageRecorder';
@@ -424,6 +424,25 @@ const ChatScreen = ({ user, chat, onBack }) => {
                     ) : (
                         <span className="text-xs text-gray-400">Çevrimdışı</span>
                     )}
+                </div>
+                {/* Call Buttons */}
+                <div className="flex gap-2">
+                    <Button
+                        variant="ghost"
+                        className="p-2 rounded-full hover:bg-dark-hover"
+                        onClick={() => console.log('Voice call:', chat.name)}
+                        title="Sesli Arama"
+                    >
+                        <Phone size={20} />
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        className="p-2 rounded-full hover:bg-dark-hover"
+                        onClick={() => console.log('Video call:', chat.name)}
+                        title="Görüntülü Arama"
+                    >
+                        <Video size={20} />
+                    </Button>
                 </div>
             </div>
 
