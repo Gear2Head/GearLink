@@ -1,0 +1,512 @@
+// This is your Prisma schema file
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// USER MANAGEMENT
+// ============================================================================
+
+model User {
+  id            String    @id @default(uuid())
+  
+  // Phone authentication
+  phoneNumber   String?   @unique
+  phoneCountry  String?
+  
+  // Email authentication
+  email         String?   @unique
+  password      String?   // Hashed password
+  emailVerified Boolean   @default(false)
+  
+  // OAuth authentication
+  googleId      String?   @unique
+  
+  // Profile
+  username      String?   @unique
+  displayName   String?
+  bio           String?
+  avatarUrl     String?
+  
+  // Status
+  status        UserStatus @default(ACTIVE)
+  lastSeenAt    DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // E2EE Keys
+  identityKey   String?   // Public identity key
+  signedPreKey  String?   // Signed pre-key
+  preKeySignature String? // Signature of pre-key
+
+  // Settings
+  settings      UserSettings?
+
+  // Relationships
+  devices       Device[]
+  contacts      Contact[]     @relation("UserContacts")
+  contactOf     Contact[]     @relation("ContactUser")
+  participants  Participant[]
+  messages      Message[]
+  reactions     Reaction[]
+  reports       Report[]      @relation("ReportedBy")
+  reportedUsers Report[]      @relation("ReportedUser")
+  auditLogs     AuditLog[]
+
+  @@index([phoneNumber])
+  @@index([username])
+  @@map("users")
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  BANNED
+  DELETED
+}
+
+model UserSettings {
+  id                    String   @id @default(uuid())
+  userId                String   @unique
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Privacy
+  profilePhotoVisibility VisibilityLevel @default(EVERYONE)
+  statusVisibility       VisibilityLevel @default(EVERYONE)
+  lastSeenVisibility     VisibilityLevel @default(EVERYONE)
+  readReceiptsEnabled    Boolean  @default(true)
+  
+  // Notifications
+  notificationsEnabled   Boolean  @default(true)
+  messageNotifications   Boolean  @default(true)
+  groupNotifications     Boolean  @default(true)
+  
+  // Security
+  twoFactorEnabled       Boolean  @default(false)
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("user_settings")
+}
+
+enum VisibilityLevel {
+  EVERYONE
+  CONTACTS
+  NOBODY
+}
+
+model Device {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  deviceId        String   @unique // Client-generated device ID
+  deviceName      String?
+  deviceType      DeviceType
+  platform        String?  // iOS, Android, Web
+  appVersion      String?
+  
+  // Push notifications
+  pushToken       String?
+  pushProvider    PushProvider?
+  
+  // E2EE
+  registrationId  Int?     // Signal protocol registration ID
+  
+  // Session
+  lastActiveAt    DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  refreshTokens   RefreshToken[]
+
+  @@index([userId])
+  @@index([deviceId])
+  @@map("devices")
+}
+
+enum DeviceType {
+  MOBILE
+  WEB
+  DESKTOP
+}
+
+enum PushProvider {
+  FCM
+  APNS
+}
+
+model RefreshToken {
+  id          String   @id @default(uuid())
+  token       String   @unique
+  deviceId    String
+  device      Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  revokedAt   DateTime?
+
+  @@index([token])
+  @@index([deviceId])
+  @@map("refresh_tokens")
+}
+
+// ============================================================================
+// CONTACTS
+// ============================================================================
+
+model Contact {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation("UserContacts", fields: [userId], references: [id], onDelete: Cascade)
+  
+  contactId   String
+  contact     User     @relation("ContactUser", fields: [contactId], references: [id], onDelete: Cascade)
+  
+  displayName String?  // Custom name for this contact
+  isBlocked   Boolean  @default(false)
+  isFavorite  Boolean  @default(false)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, contactId])
+  @@index([userId])
+  @@index([contactId])
+  @@map("contacts")
+}
+
+// ============================================================================
+// CONVERSATIONS & MESSAGES
+// ============================================================================
+
+model Conversation {
+  id              String   @id @default(uuid())
+  type            ConversationType
+  
+  // Group metadata
+  name            String?
+  description     String?
+  avatarUrl       String?
+  
+  // Settings
+  isArchived      Boolean  @default(false)
+  isMuted         Boolean  @default(false)
+  
+  // E2EE
+  senderKeyId     String?  // For group chats using Sender Keys
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  participants    Participant[]
+  messages        Message[]
+
+  @@index([type])
+  @@map("conversations")
+}
+
+enum ConversationType {
+  PRIVATE
+  GROUP
+}
+
+model Participant {
+  id              String   @id @default(uuid())
+  conversationId  String
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  role            ParticipantRole @default(MEMBER)
+  
+  // Read tracking
+  lastReadAt      DateTime?
+  lastReadMessageId String?
+  
+  // Notifications
+  isMuted         Boolean  @default(false)
+  
+  joinedAt        DateTime @default(now())
+  leftAt          DateTime?
+
+  @@unique([conversationId, userId])
+  @@index([conversationId])
+  @@index([userId])
+  @@map("participants")
+}
+
+enum ParticipantRole {
+  ADMIN
+  MEMBER
+}
+
+model Message {
+  id              String   @id @default(uuid())
+  conversationId  String
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  senderId        String
+  sender          User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  
+  // Message content (encrypted for E2EE)
+  type            MessageType
+  content         String?  // Encrypted text or metadata JSON
+  
+  // Ordering
+  sequenceNumber  BigInt   // Per-conversation sequence number
+  
+  // Client reconciliation
+  tempId          String?  // Client-generated temporary ID
+  
+  // Reply/Forward
+  replyToId       String?
+  replyTo         Message? @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies         Message[] @relation("MessageReplies")
+  
+  forwardedFromId String?
+  
+  // Edit/Delete
+  editedAt        DateTime?
+  deletedAt       DateTime?
+  deletedForEveryone Boolean @default(false)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relationships
+  deliveries      MessageDelivery[]
+  media           MessageMedia[]
+  reactions       Reaction[]
+
+  @@unique([conversationId, sequenceNumber])
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+  @@index([tempId])
+  @@map("messages")
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  AUDIO
+  VOICE
+  DOCUMENT
+  LOCATION
+  CONTACT
+  STICKER
+  SYSTEM
+}
+
+model MessageDelivery {
+  id          String   @id @default(uuid())
+  messageId   String
+  message     Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  
+  userId      String   // Recipient user ID
+  
+  status      DeliveryStatus @default(SENT)
+  
+  sentAt      DateTime @default(now())
+  deliveredAt DateTime?
+  readAt      DateTime?
+
+  @@unique([messageId, userId])
+  @@index([messageId])
+  @@index([userId, status])
+  @@map("message_deliveries")
+}
+
+enum DeliveryStatus {
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+model MessageMedia {
+  id          String   @id @default(uuid())
+  messageId   String
+  message     Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  
+  type        MediaType
+  
+  // S3 storage
+  s3Key       String
+  s3Bucket    String
+  cdnUrl      String?
+  
+  // Metadata
+  fileName    String?
+  mimeType    String
+  fileSize    BigInt
+  
+  // Dimensions (for images/videos)
+  width       Int?
+  height      Int?
+  duration    Int?     // seconds for audio/video
+  
+  // Thumbnails
+  thumbnailS3Key String?
+  thumbnailUrl   String?
+  
+  // Processing
+  isProcessed Boolean  @default(false)
+  processingError String?
+  
+  // Security
+  isScanned   Boolean  @default(false)
+  scanResult  String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([messageId])
+  @@index([s3Key])
+  @@map("message_media")
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+}
+
+model Reaction {
+  id          String   @id @default(uuid())
+  messageId   String
+  message     Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  emoji       String   // Unicode emoji
+  
+  createdAt   DateTime @default(now())
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
+  @@index([userId])
+  @@map("reactions")
+}
+
+// ============================================================================
+// PRE-KEYS (for E2EE)
+// ============================================================================
+
+model PreKey {
+  id          String   @id @default(uuid())
+  userId      String
+  
+  keyId       Int
+  publicKey   String
+  
+  isUsed      Boolean  @default(false)
+  usedAt      DateTime?
+  
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, keyId])
+  @@index([userId, isUsed])
+  @@map("pre_keys")
+}
+
+// ============================================================================
+// MODERATION & REPORTING
+// ============================================================================
+
+model Report {
+  id              String   @id @default(uuid())
+  reportedByUserId String
+  reportedBy      User     @relation("ReportedBy", fields: [reportedByUserId], references: [id], onDelete: Cascade)
+  
+  reportedUserId  String
+  reportedUser    User     @relation("ReportedUser", fields: [reportedUserId], references: [id], onDelete: Cascade)
+  
+  reason          ReportReason
+  description     String?
+  
+  status          ReportStatus @default(PENDING)
+  reviewedAt      DateTime?
+  reviewedBy      String?
+  resolution      String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([reportedUserId])
+  @@index([status])
+  @@map("reports")
+}
+
+enum ReportReason {
+  SPAM
+  HARASSMENT
+  INAPPROPRIATE_CONTENT
+  IMPERSONATION
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  RESOLVED
+  DISMISSED
+}
+
+// ============================================================================
+// AUDIT LOGS (GDPR Compliance)
+// ============================================================================
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  action      String   // e.g., "user.created", "message.deleted"
+  entityType  String   // e.g., "User", "Message"
+  entityId    String?
+  
+  metadata    Json?    // Additional context
+  ipAddress   String?
+  userAgent   String?
+  
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ============================================================================
+// VERIFICATION CODES (Phone verification)
+// ============================================================================
+
+model VerificationCode {
+  id          String   @id @default(uuid())
+  phoneNumber String
+  code        String
+  
+  attempts    Int      @default(0)
+  verified    Boolean  @default(false)
+  
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([phoneNumber, code])
+  @@index([expiresAt])
+  @@map("verification_codes")
+}

@@ -1,0 +1,12 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'gearlink-services'
+    static_configs:
+      - targets: 
+        - 'auth-service:3001'
+        - 'chat-service:3003'
+        - 'user-service:3002'
+        - 'media-service:3004'
+        - 'notification-service:3005'

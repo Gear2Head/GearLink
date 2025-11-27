@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gearlink
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: global-config
+  namespace: gearlink
+data:
+  NODE_ENV: "production"
+  API_GATEWAY_CORS_ORIGIN: "*"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: global-secrets
+  namespace: gearlink
+type: Opaque
+data:
+  # Base64 encoded placeholders
+  DATABASE_URL: "cG9zdGdyZXNxbDovL3VzZXI6cGFzc3dvcmRAcG9zdGdyZXM6NTQzMi9nZWFybGluaw=="
+  REDIS_URL: "cmVkaXM6Ly9yZWRpcy1tYXN0ZXI6NjM3OQ=="
+  JWT_SECRET: "c3VwZXItc2VjcmV0LWtleQ=="

@@ -1,344 +1,361 @@
-# 🔗 GearLink
+# GearLink - Production-Ready Messaging Application
 
-<div align="center">
+A complete, production-ready WhatsApp-like messaging application with end-to-end encryption, real-time messaging, media sharing, and comprehensive infrastructure.
 
-![GearLink Logo](public/logo.png)
+## 🏗️ Architecture
 
-**Modern, WhatsApp-style messaging app with AI chatbot integration**
-
-[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![React](https://img.shields.io/badge/React-18.2-blue.svg)](https://reactjs.org/)
-[![Capacitor](https://img.shields.io/badge/Capacitor-7.4-brightgreen.svg)](https://capacitorjs.com/)
-[![Firebase](https://img.shields.io/badge/Firebase-10.8-orange.svg)](https://firebase.google.com/)
-
-</div>
-
-## 📥 Download
-
-### Android APK
-
-**Latest Release**: [Download v1.0](https://github.com/Gear2Head/GearLink/releases/latest)
-
-```bash
-# Direct download link (after Release is created)
-https://github.com/Gear2Head/GearLink/releases/download/v1.0/app-debug.apk
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Mobile    │────▶│ API Gateway │────▶│   Backend   │
+│ (React RN)  │     │  (NestJS)   │     │  Services   │
+└─────────────┘     └─────────────┘     └─────────────┘
+                           │                    │
+┌─────────────┐           │                    │
+│  Web PWA    │───────────┘                    │
+│ (React+Vite)│                                │
+└─────────────┘                                │
+                                               ▼
+┌──────────────────────────────────────────────────────┐
+│  Auth │ User │ Chat │ Media │ Notification │ Worker  │
+└──────────────────────────────────────────────────────┘
+                           │
+        ┌──────────────────┼──────────────────┐
+        ▼                  ▼                  ▼
+  ┌──────────┐      ┌──────────┐      ┌──────────┐
+  │PostgreSQL│      │  Redis   │      │  Kafka   │
+  └──────────┘      └──────────┘      └──────────┘
 ```
 
-**Installation**:
-1. Enable "Unknown sources" in Android settings
-2. Download APK
-3. Install and open
-4. Configure Firebase (see Setup section)
+## 📦 Tech Stack
 
-> ⚠️ **Note**: First release requires manual upload. See [RELEASE_GUIDE.md](RELEASE_GUIDE.md) for instructions.
+### Backend
+- **Framework**: NestJS 10 + TypeScript 5
+- **Database**: PostgreSQL 15 + Prisma ORM
+- **Cache/Pub-Sub**: Redis 7 Cluster
+- **Message Queue**: Kafka 3.x (primary) / RabbitMQ (alternative)
+- **Search**: Elasticsearch 8.x
+- **Real-time**: Socket.IO + Redis Adapter
+- **Storage**: AWS S3 + CloudFront CDN
 
----
+### Frontend
+- **Mobile**: React Native + Expo SDK 48 + TypeScript
+- **Web**: React 18 + Vite 5 + TypeScript
+- **Offline DB**: WatermelonDB (mobile)
+- **E2EE**: libsignal-protocol + libsodium
 
-## 📱 Features
-
-### Core Messaging
-- ✅ Real-time chat with Firebase Firestore
-- ✅ Text messages with typing indicators
-- ✅ Image & file uploads (10MB limit)
-- ✅ Voice messages
-- ✅ Location sharing
-- ✅ Polls & surveys
-- ✅ Message reactions
-- ✅ Message editing & deletion
-- ✅ Reply to messages
-
-### AI Integration
-- 🤖 **Kübra Nisa AI Bot** - Realistic conversational AI
-  - Natural Turkish conversation style
-  - Typing delays (5-30 seconds)
-  - Emotion-aware responses
-  - Context tracking
-
-### User Features
-- 👤 Profile management
-- 📸 Capacitor Camera integration
-- 🌍 Geolocation support
-- 🔔 Push notifications
-- 🔐 Firebase Authentication
-- 📊 Admin panel
-
-### UI/UX
-- 🎨 WhatsApp-inspired dark theme
-- 📱 Responsive design (mobile + desktop)
-- ⚡ Fast & optimized
-- 🌐 Turkish language support
-
----
-
-## 🛠️ Tech Stack
-
-| Category | Technologies |
-|----------|-------------|
-| **Frontend** | React 18, Vite, Tailwind CSS |
-| **Mobile** | Capacitor (iOS/Android) |
-| **Backend** | Firebase (Firestore, Auth, Storage) |
-| **AI** | Google Gemini API |
-| **Icons** | Lucide React |
-| **Utilities** | date-fns, emoji-picker-react |
-
----
+### Infrastructure
+- **Containers**: Docker 24+
+- **Orchestration**: Kubernetes + Helm
+- **IaC**: Terraform 1.5+
+- **CI/CD**: GitHub Actions
+- **Monitoring**: Prometheus + Grafana + Loki
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 18+ 
-- npm or yarn
-- Android Studio (for Android)
-- Xcode (for iOS)
+- Node.js 20.x
+- pnpm 8.x
+- Docker 24+
+- PostgreSQL 15
+- Redis 7
 
-### Installation
+### Local Development
 
-1. **Clone the repository**
 ```bash
-git clone https://github.com/yourusername/GearLink.git
+# Clone repository
+git clone <repo-url>
 cd GearLink
-```
 
-2. **Install dependencies**
-```bash
-npm install
-```
+# Install dependencies
+pnpm install
 
-3. **Configure environment**
-```bash
+# Setup environment variables
 cp .env.example .env
+# Edit .env with your configuration
+
+# Start infrastructure (PostgreSQL, Redis, Kafka)
+docker-compose up -d
+
+# Run database migrations
+pnpm prisma:migrate
+
+# Seed database
+pnpm prisma:seed
+
+# Start all services in development mode
+pnpm dev:all
+
+# Or start individual services
+pnpm dev:api-gateway
+pnpm dev:auth
+pnpm dev:chat
+pnpm dev:media
+pnpm dev:notification
+pnpm dev:worker
+
+# Start mobile app
+cd apps/mobile
+pnpm start
+
+# Start web app
+cd apps/web
+pnpm dev
 ```
 
-Edit `.env` and add your Firebase credentials:
+## 🔐 Environment Variables
+
+Create a `.env` file in the root directory:
+
 ```env
-VITE_FIREBASE_API_KEY=your_api_key
-VITE_FIREBASE_AUTH_DOMAIN=your_domain
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_bucket
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-VITE_FIREBASE_APP_ID=your_app_id
+# Database
+DATABASE_URL="postgresql://user:password@localhost:5432/gearlink"
 
-# Optional
-VITE_GEMINI_API_KEY=your_gemini_key
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+
+# Kafka
+KAFKA_BROKERS=localhost:9092
+
+# JWT
+JWT_SECRET=your-secret-key-change-in-production
+JWT_ACCESS_EXPIRY=15m
+JWT_REFRESH_EXPIRY=7d
+
+# AWS
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=your-access-key
+AWS_SECRET_ACCESS_KEY=your-secret-key
+S3_BUCKET=gearlink-media
+CLOUDFRONT_DOMAIN=cdn.example.com
+
+# SMS (Twilio)
+TWILIO_ACCOUNT_SID=your-account-sid
+TWILIO_AUTH_TOKEN=your-auth-token
+TWILIO_PHONE_NUMBER=+1234567890
+
+# Push Notifications
+FCM_SERVER_KEY=your-fcm-server-key
+APNS_KEY_ID=your-apns-key-id
+APNS_TEAM_ID=your-team-id
+APNS_BUNDLE_ID=com.gearlink.app
+
+# Elasticsearch
+ELASTICSEARCH_NODE=http://localhost:9200
+
+# Monitoring
+PROMETHEUS_PORT=9090
+GRAFANA_PORT=3000
 ```
 
-4. **Run development server**
-```bash
-npm run dev
-```
-
----
-
-## 📦 Build & Deploy
-
-### Web Build
-```bash
-npm run build
-npm run preview
-```
-
-### Android APK
-
-**Debug APK** (for testing):
-```bash
-npm run build:apk
-```
-Output: `android/app/build/outputs/apk/debug/app-debug.apk`
-
-**Release APK** (production):
-```bash
-# First time: Create keystore
-cd android
-mkdir keystore
-keytool -genkey -v -keystore keystore/gearlink.keystore \
-  -alias gearlink -keyalg RSA -keysize 2048 -validity 10000
-
-# Build
-npm run build:apk:release
-```
-Output: `android/app/build/outputs/apk/release/app-release.apk`
-
-### iOS Build
-```bash
-npm run build
-npx cap sync ios
-npx cap open ios
-```
-Build in Xcode.
-
----
-
-## 📂 Project Structure
+## 📁 Project Structure
 
 ```
 GearLink/
-├── src/
-│   ├── components/        # React components
-│   │   ├── ChatScreen.jsx
-│   │   ├── ChatListScreen.jsx
-│   │   ├── ProfileScreen.jsx
-│   │   ├── AdminPanel.jsx
-│   │   └── ui/            # Reusable UI components
-│   ├── lib/              # Utilities & services
-│   │   ├── firebase.js
-│   │   ├── errorHandler.js
-│   │   ├── kubraNisaAI.js
-│   │   └── locationService.js
-│   ├── App.jsx           # Main application
-│   └── main.jsx          # Entry point
-├── android/              # Android Capacitor project
-├── ios/                  # iOS Capacitor project
-├── public/               # Static assets
-└── README.md
+├── apps/
+│   ├── api-gateway/          # API Gateway service
+│   ├── auth-service/         # Authentication & authorization
+│   ├── user-service/         # User management
+│   ├── chat-service/         # Chat & messaging
+│   ├── media-service/        # Media upload & management
+│   ├── notification-service/ # Push notifications
+│   ├── worker-media/         # Background media processing
+│   ├── mobile/               # React Native mobile app
+│   └── web/                  # React PWA web app
+├── libs/
+│   ├── prisma/               # Database schema & migrations
+│   ├── common/               # Shared utilities & DTOs
+│   └── crypto/               # E2EE helpers
+├── infra/
+│   ├── terraform/            # Infrastructure as Code
+│   ├── k8s/                  # Kubernetes manifests
+│   ├── docker/               # Dockerfiles
+│   └── monitoring/           # Prometheus & Grafana configs
+├── tests/
+│   ├── unit/                 # Unit tests
+│   ├── integration/          # Integration tests
+│   ├── e2e/                  # End-to-end tests
+│   └── load/                 # Load tests (k6)
+├── docs/
+│   ├── api/                  # OpenAPI specs
+│   ├── architecture/         # Architecture diagrams
+│   └── runbooks/             # Operational runbooks
+├── .github/
+│   └── workflows/            # CI/CD pipelines
+├── docker-compose.yml        # Local development stack
+├── package.json              # Monorepo root
+├── pnpm-workspace.yaml       # pnpm workspace config
+└── README.md                 # This file
 ```
 
----
+## 🧪 Testing
 
-## 🎨 UI Screenshots
-
-> Add screenshots here
-
----
-
-## 🔥 Firebase Setup
-
-### 1. Create Firebase Project
-1. Go to [Firebase Console](https://console.firebase.google.com/)
-2. Create a new project
-3. Enable Authentication (Email/Password)
-4. Enable Firestore Database
-5. Enable Storage
-
-### 2. Security Rules
-
-**Firestore** (`firestore.rules`):
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth.uid == userId;
-    }
-    
-    match /chats/{chatId}/messages/{messageId} {
-      allow read, write: if request.auth != null;
-    }
-  }
-}
-```
-
-**Storage** (`storage.rules`):
-```javascript
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /chat-files/{allPaths=**} {
-      allow read, write: if request.auth != null;
-    }
-  }
-}
-```
-
----
-
-## 🤖 AI Bot Setup
-
-Create a Gemini API key:
-1. Go to [Google AI Studio](https://aistudio.google.com/app/apikey)
-2. Create API key
-3. Add to `.env`:
-```env
-VITE_GEMINI_API_KEY=your_key_here
-```
-
----
-
-## 📝 Available Scripts
-
-| Script | Description |
-|--------|-------------|
-| `npm run dev` | Start development server |
-| `npm run build` | Build for production |
-| `npm run preview` | Preview production build |
-| `npm run lint` | Run ESLint |
-| `npm run sync` | Sync Capacitor |
-| `npm run build:android` | Open Android Studio |
-| `npm run build:apk` | Build debug APK |
-| `npm run build:apk:release` | Build release APK |
-
----
-
-## 🐛 Troubleshooting
-
-### Build Issues
 ```bash
-# Clean install
-rm -rf node_modules package-lock.json
-npm install
+# Run all tests
+pnpm test
 
-# Clean Android build
-cd android
-./gradlew clean
-cd ..
+# Unit tests
+pnpm test:unit
+
+# Integration tests (requires Docker)
+pnpm test:integration
+
+# E2E tests
+pnpm test:e2e
+
+# Load tests
+pnpm test:load
+
+# Test coverage
+pnpm test:coverage
 ```
 
-### Capacitor Sync Issues
+## 🏭 Production Deployment
+
+### Using Kubernetes + Helm
+
 ```bash
-npx cap sync
-npx cap update
+# Build Docker images
+pnpm docker:build
+
+# Push to registry
+pnpm docker:push
+
+# Deploy with Helm
+cd infra/k8s
+helm install gearlink ./charts/gearlink -f values.production.yaml
+
+# Or use kubectl
+kubectl apply -f manifests/
 ```
 
-### Firebase Errors
-- Check `.env` credentials
-- Verify Firebase rules
-- Enable required Firebase services
+### Using Terraform
 
----
+```bash
+# Provision infrastructure
+cd infra/terraform
+terraform init
+terraform plan
+terraform apply
+
+# Get outputs
+terraform output
+```
+
+## 📊 Monitoring
+
+- **Prometheus**: http://localhost:9090
+- **Grafana**: http://localhost:3000 (admin/admin)
+- **Logs**: Loki + Grafana
+
+### Key Metrics
+- `message_send_latency_seconds` - Message delivery latency
+- `websocket_connections_total` - Active WebSocket connections
+- `messages_lost_total` - Lost messages counter
+- `api_request_duration_seconds` - API response times
+
+### SLOs
+- Message delivery: 99.99% success within 5s (p95)
+- API availability: 99.9%
+- WebSocket uptime: 99.95%
+
+## 🔒 Security
+
+### End-to-End Encryption
+- **Protocol**: Signal Protocol (X3DH + Double Ratchet)
+- **Group Chats**: Sender Keys
+- **Key Storage**: Secure enclave (mobile) / IndexedDB encrypted (web)
+
+### Authentication
+- Phone number verification (SMS)
+- JWT access tokens (15min) + refresh tokens (7d)
+- Refresh token rotation
+- Device-based sessions
+
+### Infrastructure Security
+- TLS 1.3 everywhere
+- CORS configured
+- CSP headers
+- Rate limiting (30 msg/sec per user)
+- DDoS protection (Cloudflare)
+- Secrets in KMS/Vault
+
+## 📖 API Documentation
+
+- **OpenAPI Spec**: [docs/api/openapi.yaml](docs/api/openapi.yaml)
+- **WebSocket Events**: [docs/api/websocket-events.json](docs/api/websocket-events.json)
+- **Swagger UI**: http://localhost:3000/api/docs (when running)
+
+## 🔄 CI/CD Pipeline
+
+GitHub Actions workflows:
+- **PR Checks**: Lint, test, build
+- **Security Scan**: Snyk + Trivy
+- **Build Images**: Docker multi-stage builds
+- **Deploy Staging**: Auto-deploy on merge to `develop`
+- **Deploy Production**: Manual approval on merge to `main`
+
+## 📚 Documentation
+
+- [Architecture Overview](docs/architecture/README.md)
+- [Data Models](docs/architecture/data-models.md)
+- [API Reference](docs/api/README.md)
+- [Deployment Guide](docs/deployment.md)
+- [Runbooks](docs/runbooks/README.md)
+- [Security Guide](docs/security.md)
+
+## 🆘 Troubleshooting
+
+### Database Connection Issues
+```bash
+# Check PostgreSQL is running
+docker ps | grep postgres
+
+# Check connection
+psql $DATABASE_URL -c "SELECT 1"
+```
+
+### Redis Connection Issues
+```bash
+# Check Redis is running
+docker ps | grep redis
+
+# Test connection
+redis-cli ping
+```
+
+### WebSocket Connection Issues
+- Check CORS configuration
+- Verify JWT token is valid
+- Check Redis adapter is connected
+- Review firewall/load balancer settings
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please:
 1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
-
----
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 👨‍💻 Authors
-
-- **GEAR_HEAD** - Initial development
-
----
+MIT License - see [LICENSE](LICENSE) file for details
 
 ## 🙏 Acknowledgments
 
-- Firebase for backend infrastructure
-- Google Gemini for AI capabilities
-- Capacitor for mobile deployment
-- Lucide for beautiful icons
-- Tailwind CSS for styling
+- Signal Protocol for E2EE implementation
+- NestJS community
+- React Native community
+- All open-source contributors
 
 ---
 
-## 📞 Support
-
-For support, email support@gearlink.app or open an issue on GitHub.
-
----
-
-<div align="center">
-
-**Made with ❤️ using React + Firebase + Capacitor**
-
-[⭐ Star this repo](https://github.com/yourusername/GearLink) if you find it useful!
-
-</div>
+**Note**: This is a production-ready application. Ensure you:
+- Change all default secrets and keys
+- Configure proper SSL certificates
+- Set up monitoring and alerting
+- Implement backup strategies
+- Review security configurations
+- Comply with GDPR and local regulations

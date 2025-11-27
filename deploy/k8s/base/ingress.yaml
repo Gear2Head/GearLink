@@ -1,0 +1,40 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gearlink-ingress
+  namespace: gearlink
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+spec:
+  tls:
+  - hosts:
+    - api.gearlink.com
+    secretName: gearlink-tls
+  rules:
+  - host: api.gearlink.com
+    http:
+      paths:
+      - path: /auth
+        pathType: Prefix
+        backend:
+          service:
+            name: auth-service
+            port:
+              number: 80
+      - path: /chat
+        pathType: Prefix
+        backend:
+          service:
+            name: chat-service
+            port:
+              number: 80
+      - path: /socket.io
+        pathType: Prefix
+        backend:
+          service:
+            name: chat-service
+            port:
+              number: 80
