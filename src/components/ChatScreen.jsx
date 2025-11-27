@@ -408,33 +408,20 @@ const ChatScreen = ({ user, chat, onBack }) => {
                 </Button>
                 <div
                     className="flex items-center gap-3 flex-1 cursor-pointer hover:bg-dark-hover/30 rounded-lg p-1 -m-1 transition"
-                    onClick={() => {
-                        console.log('ChatScreen: Header clicked', chat);
-                        onViewProfile(chat);
-                    }}
-                >
-                    <Avatar fallback={chat.name[0]} src={chat.photoURL} className="w-8 h-8 bg-gradient-to-br from-primary to-secondary" />
-                    <div className="flex-1">
-                        <h2 className="font-semibold text-sm">{chat.name}</h2>
-                        {otherUserTyping ? (
-                            <span className="text-xs text-primary flex items-center gap-1">
-                                <span className="w-1 h-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
-                                <span className="w-1 h-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
-                                <span className="w-1 h-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
-                                yazıyor
+                    yazıyor
                             </span>
-                        ) : chat.isOnline ? (
-                            <span className="text-xs text-green-400 flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                                Çevrimiçi
-                            </span>
-                        ) : (
-                            <span className="text-xs text-gray-400">Çevrimdışı</span>
+            ) : chat.isOnline ? (
+            <span className="text-xs text-green-400 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                Çevrimiçi
+            </span>
+            ) : (
+            <span className="text-xs text-gray-400">Çevrimdışı</span>
                         )}
-                    </div>
-                </div>
-                {/* Call Buttons */}
-                <div className="flex gap-2">
+        </div>
+                </div >
+    {/* Call Buttons */ }
+    < div className = "flex gap-2" >
                     <Button
                         variant="ghost"
                         className="p-2 rounded-full hover:bg-dark-hover"
@@ -451,348 +438,358 @@ const ChatScreen = ({ user, chat, onBack }) => {
                     >
                         <Video size={20} />
                     </Button>
-                </div>
-            </div>
+                </div >
+            </div >
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3">
-                {messages.map((msg) => {
-                    const isMe = msg.senderId === user.uid;
-                    const replyToMsg = msg.replyTo ? messages.find(m => m.id === msg.replyTo) : null;
-                    const reactions = messageReactions[msg.id] || {};
+    {/* Messages */ }
+    < div className = "flex-1 overflow-y-auto p-3 sm:p-4 space-y-3" >
+    {
+        messages.map((msg) => {
+            const isMe = msg.senderId === user.uid;
+            const replyToMsg = msg.replyTo ? messages.find(m => m.id === msg.replyTo) : null;
+            const reactions = messageReactions[msg.id] || {};
 
-                    return (
-                        <div
-                            key={msg.id}
-                            className={cn(
-                                "flex w-full",
-                                isMe ? "justify-end" : "justify-start"
-                            )}
-                        >
-                            <div
-                                className={cn(
-                                    "max-w-[75%] sm:max-w-[85%] rounded-2xl p-3 break-words relative group shadow-md",
-                                    isMe
-                                        ? "bg-message-sent text-white rounded-tr-sm"
-                                        : "bg-message-received text-gray-100 rounded-tl-sm"
-                                )}
-                            >
-                                {/* Reply preview */}
-                                {replyToMsg && (
-                                    <div className="mb-2 p-2 bg-black/20 rounded-lg border-l-2 border-white/30 text-xs">
-                                        <p className="font-semibold opacity-70">
-                                            {replyToMsg.senderId === user.uid ? 'Siz' : chat.name}
-                                        </p>
-                                        <p className="opacity-60 truncate">{replyToMsg.text || '📎 Dosya'}</p>
-                                    </div>
-                                )}
-
-                                {renderMessageContent(msg)}
-
-                                <div className="flex items-center justify-between mt-1.5 gap-2">
-                                    <span className="text-[10px] opacity-80 inline-flex items-center gap-1.5">
-                                        {msg.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        {msg.edited && <span className="text-[9px]">(düzenlendi)</span>}
-                                    </span>
-                                    {isMe && (
-                                        <span className="inline-flex items-center">
-                                            {msg.read ? (
-                                                <CheckCheck size={16} className="text-blue-300" strokeWidth={2.5} />
-                                            ) : msg.delivered ? (
-                                                <CheckCheck size={16} className="text-white/60" strokeWidth={2} />
-                                            ) : (
-                                                <Check size={16} className="text-white/60" strokeWidth={2} />
-                                            )}
-                                        </span>
-                                    )}
-                                </div>
-
-                                {/* Message menu */}
-                                {isMe && (
-                                    <button
-                                        onClick={() => setMessageMenuOpen(messageMenuOpen === msg.id ? null : msg.id)}
-                                        className="absolute -top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-dark-surface rounded-full p-1 shadow-lg"
-                                    >
-                                        <MoreVertical size={16} />
-                                    </button>
-                                )}
-
-                                {messageMenuOpen === msg.id && (
-                                    <div className="absolute top-full right-0 mt-2 bg-dark-surface border border-dark-border rounded-xl shadow-xl z-20 overflow-hidden">
-                                        {msg.type === 'text' && (
-                                            <button
-                                                onClick={() => {
-                                                    setEditingMessage(msg);
-                                                    setNewMessage(msg.text);
-                                                    setMessageMenuOpen(null);
-                                                }}
-                                                className="flex items-center gap-2 px-4 py-2 hover:bg-dark-border w-full text-left text-sm"
-                                            >
-                                                <Edit size={16} />
-                                                Düzenle
-                                            </button>
-                                        )}
-                                        <button
-                                            onClick={() => {
-                                                setReplyingTo(msg);
-                                                setMessageMenuOpen(null);
-                                            }}
-                                            className="flex items-center gap-2 px-4 py-2 hover:bg-dark-border w-full text-left text-sm"
-                                        >
-                                            <Reply size={16} />
-                                            Yanıtla
-                                        </button>
-                                        <button
-                                            onClick={async () => {
-                                                if (confirm('Mesajı silmek istediğinizden emin misiniz?')) {
-                                                    try {
-                                                        await deleteDoc(doc(db, `chats/${chatId}/messages`, msg.id));
-                                                        setMessageMenuOpen(null);
-                                                    } catch (err) {
-                                                        console.error("Error deleting message:", err);
-                                                    }
-                                                }
-                                            }}
-                                            className="flex items-center gap-2 px-4 py-2 hover:bg-red-500/20 text-red-400 w-full text-left text-sm"
-                                        >
-                                            <Trash2 size={16} />
-                                            Sil
-                                        </button>
-                                    </div>
-                                )}
-
-                                {/* Reaction button */}
-                                <button
-                                    onClick={() => setSelectedMessageForReaction(selectedMessageForReaction === msg.id ? null : msg.id)}
-                                    className="absolute -top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity bg-dark-surface rounded-full p-1 shadow-lg"
-                                >
-                                    <Smile size={16} />
-                                </button>
-
-                                {/* Reaction picker */}
-                                {selectedMessageForReaction === msg.id && (
-                                    <div className="absolute top-full mt-2 bg-dark-surface border border-dark-border rounded-xl p-2 shadow-xl flex gap-2 z-20">
-                                        {['❤️', '👍', '😂', '😮', '😢', '🔥'].map(emoji => (
-                                            <button
-                                                key={emoji}
-                                                onClick={() => handleReaction(msg.id, emoji)}
-                                                className="hover:scale-125 transition-transform text-xl"
-                                            >
-                                                {emoji}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-
-                                {/* Display reactions */}
-                                {Object.keys(reactions).length > 0 && (
-                                    <div className="flex flex-wrap gap-1 mt-2">
-                                        {Object.entries(reactions).map(([userId, reactionData]) => (
-                                            <span
-                                                key={userId}
-                                                className="inline-flex items-center bg-dark-bg/50 rounded-full px-2 py-0.5 text-sm"
-                                            >
-                                                {reactionData.emoji}
-                                            </span>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    );
-                })}
-                <div ref={messagesEndRef} />
-            </div>
-
-            {/* Reply preview */}
-            {replyingTo && (
-                <div className="px-4 py-2 bg-dark-surface/50 flex items-center gap-2 border-t border-dark-border">
-                    <Reply size={16} className="text-primary" />
-                    <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold">{replyingTo.senderId === user.uid ? 'Siz' : chat.name}</p>
-                        <p className="text-xs text-gray-400 truncate">{replyingTo.text || '📎 Dosya'}</p>
-                    </div>
-                    <Button variant="ghost" onClick={() => setReplyingTo(null)} className="p-1">
-                        <X size={16} />
-                    </Button>
-                </div>
-            )}
-
-            {/* Edit preview */}
-            {editingMessage && (
-                <div className="px-4 py-2 bg-yellow-500/10 flex items-center gap-2 border-t border-yellow-500/30">
-                    <Edit size={16} className="text-yellow-500" />
-                    <div className="flex-1">
-                        <p className="text-xs font-semibold text-yellow-500">Düzenleniyor</p>
-                    </div>
-                    <Button variant="ghost" onClick={() => { setEditingMessage(null); setNewMessage(''); }} className="p-1">
-                        <X size={16} />
-                    </Button>
-                </div>
-            )}
-
-            {/* Emoji Picker */}
-            {showEmojiPicker && (
-                <div className="absolute bottom-20 right-4 z-30">
-                    <EmojiPicker onEmojiClick={handleEmojiClick} theme="dark" />
-                </div>
-            )}
-
-            {/* Input area */}
-            {showVoiceRecorder ? (
-                <VoiceMessageRecorder
-                    onSend={async (voiceData) => {
-                        await addDoc(collection(db, `chats/${chatId}/messages`), {
-                            ...voiceData,
-                            senderId: user.uid,
-                            receiverId: chat.id,
-                            timestamp: serverTimestamp(),
-                            sent: true,
-                            delivered: false,
-                            read: false
-                        });
-                        setShowVoiceRecorder(false);
-                    }}
-                    onCancel={() => setShowVoiceRecorder(false)}
-                />
-            ) : showLocationPicker ? (
-                <LocationPicker
-                    onSend={async (locationData) => {
-                        await addDoc(collection(db, `chats/${chatId}/messages`), {
-                            ...locationData,
-                            senderId: user.uid,
-                            receiverId: chat.id,
-                            timestamp: serverTimestamp(),
-                            sent: true,
-                            delivered: false,
-                            read: false
-                        });
-                        setShowLocationPicker(false);
-                    }}
-                    onCancel={() => setShowLocationPicker(false)}
-                />
-            ) : showPollCreator ? (
-                <PollCreator
-                    onSend={async (pollData) => {
-                        await addDoc(collection(db, `chats/${chatId}/messages`), {
-                            ...pollData,
-                            senderId: user.uid,
-                            receiverId: chat.id,
-                            timestamp: serverTimestamp(),
-                            sent: true,
-                            delivered: false,
-                            read: false
-                        });
-                        setShowPollCreator(false);
-                    }}
-                    onCancel={() => setShowPollCreator(false)}
-                />
-            ) : (
-                <>
-                    {/* Typing Indicator */}
-                    {otherUserTyping && (
-                        <div className="flex items-center gap-2 px-4 py-2 text-sm text-gray-400">
-                            <div className="flex space-x-1">
-                                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span>
-                                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce animation-delay-150"></span>
-                                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce animation-delay-300"></span>
-                            </div>
-                            <span>yazıyor...</span>
-                        </div>
+            return (
+                <div
+                    key={msg.id}
+                    className={cn(
+                        "flex w-full",
+                        isMe ? "justify-end" : "justify-start"
                     )}
-
-                    <form onSubmit={handleSend} className="p-4 border-t border-dark-border bg-dark-bg/80 backdrop-blur-md flex items-center gap-3 relative">
-                        {/* Camera Button */}
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            className="rounded-full w-12 h-12 p-0 bg-primary text-white"
-                            onClick={takePicture}
-                            disabled={uploading}
-                            title="Fotoğraf Çek"
-                        >
-                            <Camera size={24} />
-                        </Button>
-
-                        {/* Text Input */}
-                        <Input
-                            id="message-input"
-                            name="message"
-                            type="text"
-                            value={newMessage}
-                            onChange={(e) => handleTyping(e.target.value)}
-                            placeholder={editingMessage ? "Mesajı düzenle..." : "Bir mesaj yazın..."}
-                            className="flex-1 py-2.5 px-3 rounded-lg bg-dark-surface text-white"
-                            autoComplete="off"
-                            inputMode="text"
-                            autoCapitalize="sentences"
-                        />
-
-                        {/* Attachment Button */}
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            className="rounded-full w-10 h-10 p-0"
-                            onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
-                            title="Ekler"
-                        >
-                            <Plus size={20} />
-                        </Button>
-
-                        {/* Send Button */}
-                        <Button
-                            type="submit"
-                            className="rounded-full w-10 h-10 p-0 bg-primary hover:bg-primary-hover"
-                            disabled={!newMessage.trim() && !uploading}
-                        >
-                            <Send size={18} />
-                        </Button>
-
-                        {/* Attachment Popup Menu */}
-                        {showAttachmentMenu && (
-                            <div className="absolute bottom-20 right-16 z-30 bg-dark-surface rounded-lg shadow-lg p-3 flex flex-col space-y-2">
-                                <Button variant="ghost" className="flex items-center gap-2" onClick={() => fileInputRef.current?.click()}>
-                                    <ImageIcon size={16} /> Fotoğraf
-                                </Button>
-                                <Button variant="ghost" className="flex items-center gap-2" onClick={() => fileMultiInputRef.current?.click()}>
-                                    <Paperclip size={16} /> Dosya
-                                </Button>
-                                <Button variant="ghost" className="flex items-center gap-2" onClick={() => { setShowVoiceRecorder(true); setShowAttachmentMenu(false); }}>
-                                    <Mic size={16} /> Sesli Mesaj
-                                </Button>
-                                <Button variant="ghost" className="flex items-center gap-2" onClick={() => { setShowLocationPicker(true); setShowAttachmentMenu(false); }}>
-                                    <MapPin size={16} /> Konum
-                                </Button>
-                                <Button variant="ghost" className="flex items-center gap-2" onClick={() => { setShowPollCreator(true); setShowAttachmentMenu(false); }}>
-                                    <BarChart size={16} /> Anket
-                                </Button>
-                                <Button variant="ghost" className="flex items-center gap-2" onClick={() => setShowEmojiPicker(!showEmojiPicker)}>
-                                    <Smile size={16} /> Emoji
-                                </Button>
+                >
+                    <div
+                        className={cn(
+                            "max-w-[75%] sm:max-w-[85%] rounded-2xl p-3 break-words relative group shadow-md",
+                            isMe
+                                ? "bg-message-sent text-white rounded-tr-sm"
+                                : "bg-message-received text-gray-100 rounded-tl-sm"
+                        )}
+                    >
+                        {/* Reply preview */}
+                        {replyToMsg && (
+                            <div className="mb-2 p-2 bg-black/20 rounded-lg border-l-2 border-white/30 text-xs">
+                                <p className="font-semibold opacity-70">
+                                    {replyToMsg.senderId === user.uid ? 'Siz' : chat.name}
+                                </p>
+                                <p className="opacity-60 truncate">{replyToMsg.text || '📎 Dosya'}</p>
                             </div>
                         )}
 
-                        {/* Hidden file inputs */}
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/*"
-                            onChange={handleFileUpload}
-                            className="hidden"
-                        />
-                        <input
-                            ref={fileMultiInputRef}
-                            type="file"
-                            onChange={handleFileUpload}
-                            className="hidden"
-                        />
-                    </form>
-                </>
+                        {renderMessageContent(msg)}
+
+                        <div className="flex items-center justify-between mt-1.5 gap-2">
+                            <span className="text-[10px] opacity-80 inline-flex items-center gap-1.5">
+                                {msg.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {msg.edited && <span className="text-[9px]">(düzenlendi)</span>}
+                            </span>
+                            {isMe && (
+                                <span className="inline-flex items-center">
+                                    {msg.read ? (
+                                        <CheckCheck size={16} className="text-blue-300" strokeWidth={2.5} />
+                                    ) : msg.delivered ? (
+                                        <CheckCheck size={16} className="text-white/60" strokeWidth={2} />
+                                    ) : (
+                                        <Check size={16} className="text-white/60" strokeWidth={2} />
+                                    )}
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Message menu */}
+                        {isMe && (
+                            <button
+                                onClick={() => setMessageMenuOpen(messageMenuOpen === msg.id ? null : msg.id)}
+                                className="absolute -top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-dark-surface rounded-full p-1 shadow-lg"
+                            >
+                                <MoreVertical size={16} />
+                            </button>
+                        )}
+
+                        {messageMenuOpen === msg.id && (
+                            <div className="absolute top-full right-0 mt-2 bg-dark-surface border border-dark-border rounded-xl shadow-xl z-20 overflow-hidden">
+                                {msg.type === 'text' && (
+                                    <button
+                                        onClick={() => {
+                                            setEditingMessage(msg);
+                                            setNewMessage(msg.text);
+                                            setMessageMenuOpen(null);
+                                        }}
+                                        className="flex items-center gap-2 px-4 py-2 hover:bg-dark-border w-full text-left text-sm"
+                                    >
+                                        <Edit size={16} />
+                                        Düzenle
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => {
+                                        setReplyingTo(msg);
+                                        setMessageMenuOpen(null);
+                                    }}
+                                    className="flex items-center gap-2 px-4 py-2 hover:bg-dark-border w-full text-left text-sm"
+                                >
+                                    <Reply size={16} />
+                                    Yanıtla
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        if (confirm('Mesajı silmek istediğinizden emin misiniz?')) {
+                                            try {
+                                                await deleteDoc(doc(db, `chats/${chatId}/messages`, msg.id));
+                                                setMessageMenuOpen(null);
+                                            } catch (err) {
+                                                console.error("Error deleting message:", err);
+                                            }
+                                        }
+                                    }}
+                                    className="flex items-center gap-2 px-4 py-2 hover:bg-red-500/20 text-red-400 w-full text-left text-sm"
+                                >
+                                    <Trash2 size={16} />
+                                    Sil
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Reaction button */}
+                        <button
+                            onClick={() => setSelectedMessageForReaction(selectedMessageForReaction === msg.id ? null : msg.id)}
+                            className="absolute -top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity bg-dark-surface rounded-full p-1 shadow-lg"
+                        >
+                            <Smile size={16} />
+                        </button>
+
+                        {/* Reaction picker */}
+                        {selectedMessageForReaction === msg.id && (
+                            <div className="absolute top-full mt-2 bg-dark-surface border border-dark-border rounded-xl p-2 shadow-xl flex gap-2 z-20">
+                                {['❤️', '👍', '😂', '😮', '😢', '🔥'].map(emoji => (
+                                    <button
+                                        key={emoji}
+                                        onClick={() => handleReaction(msg.id, emoji)}
+                                        className="hover:scale-125 transition-transform text-xl"
+                                    >
+                                        {emoji}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Display reactions */}
+                        {Object.keys(reactions).length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                                {Object.entries(reactions).map(([userId, reactionData]) => (
+                                    <span
+                                        key={userId}
+                                        className="inline-flex items-center bg-dark-bg/50 rounded-full px-2 py-0.5 text-sm"
+                                    >
+                                        {reactionData.emoji}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        })
+    }
+        < div ref = { messagesEndRef } />
+            </div >
+
+    {/* Reply preview */ }
+{
+    replyingTo && (
+        <div className="px-4 py-2 bg-dark-surface/50 flex items-center gap-2 border-t border-dark-border">
+            <Reply size={16} className="text-primary" />
+            <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold">{replyingTo.senderId === user.uid ? 'Siz' : chat.name}</p>
+                <p className="text-xs text-gray-400 truncate">{replyingTo.text || '📎 Dosya'}</p>
+            </div>
+            <Button variant="ghost" onClick={() => setReplyingTo(null)} className="p-1">
+                <X size={16} />
+            </Button>
+        </div>
+    )
+}
+
+{/* Edit preview */ }
+{
+    editingMessage && (
+        <div className="px-4 py-2 bg-yellow-500/10 flex items-center gap-2 border-t border-yellow-500/30">
+            <Edit size={16} className="text-yellow-500" />
+            <div className="flex-1">
+                <p className="text-xs font-semibold text-yellow-500">Düzenleniyor</p>
+            </div>
+            <Button variant="ghost" onClick={() => { setEditingMessage(null); setNewMessage(''); }} className="p-1">
+                <X size={16} />
+            </Button>
+        </div>
+    )
+}
+
+{/* Emoji Picker */ }
+{
+    showEmojiPicker && (
+        <div className="absolute bottom-20 right-4 z-30">
+            <EmojiPicker onEmojiClick={handleEmojiClick} theme="dark" />
+        </div>
+    )
+}
+
+{/* Input area */ }
+{
+    showVoiceRecorder ? (
+        <VoiceMessageRecorder
+            onSend={async (voiceData) => {
+                await addDoc(collection(db, `chats/${chatId}/messages`), {
+                    ...voiceData,
+                    senderId: user.uid,
+                    receiverId: chat.id,
+                    timestamp: serverTimestamp(),
+                    sent: true,
+                    delivered: false,
+                    read: false
+                });
+                setShowVoiceRecorder(false);
+            }}
+            onCancel={() => setShowVoiceRecorder(false)}
+        />
+    ) : showLocationPicker ? (
+        <LocationPicker
+            onSend={async (locationData) => {
+                await addDoc(collection(db, `chats/${chatId}/messages`), {
+                    ...locationData,
+                    senderId: user.uid,
+                    receiverId: chat.id,
+                    timestamp: serverTimestamp(),
+                    sent: true,
+                    delivered: false,
+                    read: false
+                });
+                setShowLocationPicker(false);
+            }}
+            onCancel={() => setShowLocationPicker(false)}
+        />
+    ) : showPollCreator ? (
+        <PollCreator
+            onSend={async (pollData) => {
+                await addDoc(collection(db, `chats/${chatId}/messages`), {
+                    ...pollData,
+                    senderId: user.uid,
+                    receiverId: chat.id,
+                    timestamp: serverTimestamp(),
+                    sent: true,
+                    delivered: false,
+                    read: false
+                });
+                setShowPollCreator(false);
+            }}
+            onCancel={() => setShowPollCreator(false)}
+        />
+    ) : (
+        <>
+            {/* Typing Indicator */}
+            {otherUserTyping && (
+                <div className="flex items-center gap-2 px-4 py-2 text-sm text-gray-400">
+                    <div className="flex space-x-1">
+                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span>
+                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce animation-delay-150"></span>
+                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce animation-delay-300"></span>
+                    </div>
+                    <span>yazıyor...</span>
+                </div>
             )}
 
-            {/* Hidden audio element */}
-            <audio ref={audioRef} onEnded={() => setPlayingVoice(null)} />
-        </div>
+            <form onSubmit={handleSend} className="p-4 border-t border-dark-border bg-dark-bg/80 backdrop-blur-md flex items-center gap-3 relative">
+                {/* Camera Button */}
+                <Button
+                    type="button"
+                    variant="ghost"
+                    className="rounded-full w-12 h-12 p-0 bg-primary text-white"
+                    onClick={takePicture}
+                    disabled={uploading}
+                    title="Fotoğraf Çek"
+                >
+                    <Camera size={24} />
+                </Button>
+
+                {/* Text Input */}
+                <Input
+                    id="message-input"
+                    name="message"
+                    type="text"
+                    value={newMessage}
+                    onChange={(e) => handleTyping(e.target.value)}
+                    placeholder={editingMessage ? "Mesajı düzenle..." : "Bir mesaj yazın..."}
+                    className="flex-1 py-2.5 px-3 rounded-lg bg-dark-surface text-white"
+                    autoComplete="off"
+                    inputMode="text"
+                    autoCapitalize="sentences"
+                />
+
+                {/* Attachment Button */}
+                <Button
+                    type="button"
+                    variant="ghost"
+                    className="rounded-full w-10 h-10 p-0"
+                    onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
+                    title="Ekler"
+                >
+                    <Plus size={20} />
+                </Button>
+
+                {/* Send Button */}
+                <Button
+                    type="submit"
+                    className="rounded-full w-10 h-10 p-0 bg-primary hover:bg-primary-hover"
+                    disabled={!newMessage.trim() && !uploading}
+                >
+                    <Send size={18} />
+                </Button>
+
+                {/* Attachment Popup Menu */}
+                {showAttachmentMenu && (
+                    <div className="absolute bottom-20 right-16 z-30 bg-dark-surface rounded-lg shadow-lg p-3 flex flex-col space-y-2">
+                        <Button variant="ghost" className="flex items-center gap-2" onClick={() => fileInputRef.current?.click()}>
+                            <ImageIcon size={16} /> Fotoğraf
+                        </Button>
+                        <Button variant="ghost" className="flex items-center gap-2" onClick={() => fileMultiInputRef.current?.click()}>
+                            <Paperclip size={16} /> Dosya
+                        </Button>
+                        <Button variant="ghost" className="flex items-center gap-2" onClick={() => { setShowVoiceRecorder(true); setShowAttachmentMenu(false); }}>
+                            <Mic size={16} /> Sesli Mesaj
+                        </Button>
+                        <Button variant="ghost" className="flex items-center gap-2" onClick={() => { setShowLocationPicker(true); setShowAttachmentMenu(false); }}>
+                            <MapPin size={16} /> Konum
+                        </Button>
+                        <Button variant="ghost" className="flex items-center gap-2" onClick={() => { setShowPollCreator(true); setShowAttachmentMenu(false); }}>
+                            <BarChart size={16} /> Anket
+                        </Button>
+                        <Button variant="ghost" className="flex items-center gap-2" onClick={() => setShowEmojiPicker(!showEmojiPicker)}>
+                            <Smile size={16} /> Emoji
+                        </Button>
+                    </div>
+                )}
+
+                {/* Hidden file inputs */}
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                />
+                <input
+                    ref={fileMultiInputRef}
+                    type="file"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                />
+            </form>
+        </>
+    )
+}
+
+{/* Hidden audio element */ }
+<audio ref={audioRef} onEnded={() => setPlayingVoice(null)} />
+        </div >
     );
 };
 

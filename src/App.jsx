@@ -4,7 +4,7 @@ import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { getFirebaseAuth, getFirebaseDb } from './lib/firebase';
 import AuthScreen from './components/AuthScreen';
 import ChatListScreen from './components/ChatListScreen';
-import ChatScreen from './components/ChatScreenV2';
+import ChatScreen from './components/ChatScreen';
 import ProfileScreen from './components/ProfileScreen';
 import ViewProfileScreen from './components/ViewProfileScreen';
 import SettingsScreen from './components/SettingsScreen';

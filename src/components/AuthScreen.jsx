@@ -98,7 +98,7 @@ const AuthScreen = () => {
                     <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mb-2">
                         GearLink
                     </h1>
-                    <p className="text-gray-400">Hoşgeldiniz, komutan.</p>
+                    <p className="text-gray-400">Hoşgeldiniz, Başbubaşkumandanım!.</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -108,7 +108,7 @@ const AuthScreen = () => {
                             id="email"
                             name="email"
                             type="email"
-                            placeholder="ornek@email.com"
+                            placeholder="Mail adresinizi giriniz"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             autoComplete="email"
@@ -121,7 +121,7 @@ const AuthScreen = () => {
                             id="password"
                             name="password"
                             type="password"
-                            placeholder="En az 6 karakter"
+                            placeholder="Şifrenizi giriniz"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             autoComplete="current-password"
