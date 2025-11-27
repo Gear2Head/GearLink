@@ -137,7 +137,7 @@ function App() {
     }
 
     if (showProfile) {
-        // Setup window.openSettings for ProfileScreen
+        // Setup window.openSettings for ProfileScreen (legacy support if needed)
         window.openSettings = () => {
             setShowProfile(false);
             setShowSettings(true);
@@ -149,14 +149,21 @@ function App() {
         return <ViewProfileScreen user={viewingProfile} onBack={() => setViewingProfile(null)} />;
     }
 
-
     if (showSettings) {
         // Setup window.openAdminPanel for SettingsScreen
         window.openAdminPanel = () => {
             setShowSettings(false);
             setShowAdmin(true);
         };
-        return <SettingsScreen onBack={() => setShowSettings(false)} />;
+        return (
+            <SettingsScreen
+                onBack={() => setShowSettings(false)}
+                onProfileClick={() => {
+                    setShowSettings(false);
+                    setShowProfile(true);
+                }}
+            />
+        );
     }
 
     // WhatsApp-style responsive layout
@@ -172,20 +179,11 @@ function App() {
                 />
             )}
 
-            {/* Admin Button - Fixed Bottom Left */}
-            {user && !showProfile && (
-                <button
-                    onClick={() => setShowAdmin(true)}
-                    className="fixed bottom-6 left-6 bg-error text-white px-4 py-3 rounded-lg shadow-lg hover:bg-error/90 z-40 font-semibold flex items-center gap-2"
-                >
-                    <span>🔧</span> Admin
-                </button>
-            )}
-
             {isMobile ? (
                 // Mobile: Single screen with toggle
                 currentChat ? (
                     <ChatScreen
+                        key={currentChat.id}
                         user={user}
                         chat={currentChat}
                         onBack={() => setCurrentChat(null)}
@@ -196,6 +194,7 @@ function App() {
                         user={user}
                         onSelectChat={setCurrentChat}
                         onShowProfile={() => setShowProfile(true)}
+                        onSettingsClick={() => setShowSettings(true)}
                     />
                 )
             ) : (
@@ -207,6 +206,7 @@ function App() {
                             user={user}
                             onSelectChat={setCurrentChat}
                             onShowProfile={() => setShowProfile(true)}
+                            onSettingsClick={() => setShowSettings(true)}
                         />
                     </div>
 
@@ -214,6 +214,7 @@ function App() {
                     <div className="flex-1">
                         {currentChat ? (
                             <ChatScreen
+                                key={currentChat.id}
                                 user={user}
                                 chat={currentChat}
                                 onBack={() => setCurrentChat(null)}

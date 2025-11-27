@@ -1,137 +1,119 @@
 import { useState } from 'react';
-import { ArrowLeft, Moon, Bell, Database, Accessibility, Info } from 'lucide-react';
-import { Button } from './ui';
+import { ArrowLeft, Moon, Bell, Database, Accessibility, Info, Key, Lock, HelpCircle, User, Globe } from 'lucide-react';
+import { Button, Avatar } from './ui';
+import { getFirebaseAuth } from '../lib/firebase';
 
-const SettingsScreen = ({ onBack }) => {
+const SettingsScreen = ({ onBack, onProfileClick }) => {
     const [tapCount, setTapCount] = useState(0);
     const [lastTapTime, setLastTapTime] = useState(0);
+    const auth = getFirebaseAuth();
+    const currentUser = auth.currentUser;
 
     const handleVersionTap = () => {
         const now = Date.now();
-        console.log('SettingsScreen: Tap detected', { tapCount, timeDiff: now - lastTapTime });
 
-        // Reset if more than 2 seconds between taps
         if (now - lastTapTime > 2000) {
             setTapCount(1);
         } else {
             setTapCount(prev => prev + 1);
         }
-
         setLastTapTime(now);
 
-        // Open admin panel after 5 taps
         if (tapCount + 1 >= 5) {
-            console.log('SettingsScreen: Unlocking admin panel');
             setTapCount(0);
             if (window.openAdminPanel) {
                 window.openAdminPanel();
-            } else {
-                console.error('SettingsScreen: window.openAdminPanel is not defined');
             }
         }
     };
 
+    const SettingsItem = ({ icon: Icon, title, subtitle, onClick }) => (
+        <div
+            className="flex items-center gap-4 p-4 hover:bg-dark-hover cursor-pointer transition"
+            onClick={onClick}
+        >
+            <div className="text-gray-400">
+                <Icon size={24} />
+            </div>
+            <div className="flex-1">
+                <h3 className="text-base font-normal text-gray-200">{title}</h3>
+                {subtitle && <p className="text-sm text-gray-500">{subtitle}</p>}
+            </div>
+        </div>
+    );
+
     return (
-        <div className="h-screen flex flex-col bg-dark-bg">
+        <div className="h-screen flex flex-col bg-dark-bg text-white">
             {/* Header */}
-            <div className="p-4 bg-dark-surface border-b border-dark-border">
-                <div className="flex items-center gap-3">
-                    <Button variant="ghost" size="sm" onClick={onBack} className="p-2">
-                        <ArrowLeft size={20} />
-                    </Button>
-                    <h2 className="text-lg font-semibold">Ayarlar</h2>
-                </div>
+            <div className="flex items-center gap-3 p-4 border-b border-dark-border bg-dark-surface">
+                <Button variant="ghost" size="sm" onClick={onBack} className="p-2 rounded-full">
+                    <ArrowLeft size={24} />
+                </Button>
+                <h2 className="text-xl font-medium">Ayarlar</h2>
             </div>
 
-            {/* Settings Content */}
             <div className="flex-1 overflow-y-auto">
-                {/* Theme Settings */}
-                <div className="p-4 border-b border-dark-border">
-                    <div className="flex items-center gap-3 mb-3">
-                        <Moon size={20} className="text-primary" />
-                        <h3 className="text-sm font-semibold">Tema</h3>
-                    </div>
-                    <div className="bg-dark-surface rounded-lg p-4">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm">Koyu Tema</span>
-                            <div className="w-12 h-6 bg-primary rounded-full flex items-center px-1">
-                                <div className="w-4 h-4 bg-white rounded-full ml-auto"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Notification Settings */}
-                <div className="p-4 border-b border-dark-border">
-                    <div className="flex items-center gap-3 mb-3">
-                        <Bell size={20} className="text-primary" />
-                        <h3 className="text-sm font-semibold">Bildirimler</h3>
-                    </div>
-                    <div className="bg-dark-surface rounded-lg p-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm">Bildirim Sesi</span>
-                            <div className="w-12 h-6 bg-primary rounded-full flex items-center px-1">
-                                <div className="w-4 h-4 bg-white rounded-full ml-auto"></div>
-                            </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm">Titreşim</span>
-                            <div className="w-12 h-6 bg-primary rounded-full flex items-center px-1">
-                                <div className="w-4 h-4 bg-white rounded-full ml-auto"></div>
-                            </div>
-                        </div>
+                {/* Profile Card */}
+                <div
+                    className="flex items-center gap-4 p-4 border-b border-dark-border cursor-pointer hover:bg-dark-hover transition"
+                    onClick={onProfileClick}
+                >
+                    <Avatar
+                        src={currentUser?.photoURL}
+                        fallback={currentUser?.displayName?.[0]}
+                        className="w-16 h-16"
+                    />
+                    <div className="flex-1">
+                        <h3 className="text-xl font-medium">{currentUser?.displayName}</h3>
+                        <p className="text-gray-400 text-sm">Müsait</p>
                     </div>
                 </div>
 
-                {/* Storage Settings */}
-                <div className="p-4 border-b border-dark-border">
-                    <div className="flex items-center gap-3 mb-3">
-                        <Database size={20} className="text-primary" />
-                        <h3 className="text-sm font-semibold">Depolama</h3>
-                    </div>
-                    <div className="bg-dark-surface rounded-lg p-4">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm">Otomatik İndirme</span>
-                            <div className="w-12 h-6 bg-gray-600 rounded-full flex items-center px-1">
-                                <div className="w-4 h-4 bg-white rounded-full"></div>
-                            </div>
-                        </div>
-                    </div>
+                {/* Settings List */}
+                <div className="py-2">
+                    <SettingsItem
+                        icon={Key}
+                        title="Hesap"
+                        subtitle="Güvenlik bildirimleri, numara değiştirme"
+                    />
+                    <SettingsItem
+                        icon={Lock}
+                        title="Gizlilik"
+                        subtitle="Kişileri engelleme, süreli mesajlar"
+                    />
+                    <SettingsItem
+                        icon={User}
+                        title="Avatar"
+                        subtitle="Oluştur, düzenle, profil fotoğrafı yap"
+                    />
+                    <SettingsItem
+                        icon={Bell}
+                        title="Bildirimler"
+                        subtitle="Mesaj, grup ve arama sesleri"
+                    />
+                    <SettingsItem
+                        icon={Database}
+                        title="Depolama ve veriler"
+                        subtitle="Ağ kullanımı, otomatik indirme"
+                    />
+                    <SettingsItem
+                        icon={Globe}
+                        title="Uygulama dili"
+                        subtitle="Türkçe (cihaz dili)"
+                    />
+                    <SettingsItem
+                        icon={HelpCircle}
+                        title="Yardım"
+                        subtitle="Yardım merkezi, bize ulaşın, gizlilik ilkesi"
+                    />
                 </div>
 
-                {/* Accessibility */}
-                <div className="p-4 border-b border-dark-border">
-                    <div className="flex items-center gap-3 mb-3">
-                        <Accessibility size={20} className="text-primary" />
-                        <h3 className="text-sm font-semibold">Erişilebilirlik</h3>
-                    </div>
-                    <div className="bg-dark-surface rounded-lg p-4">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm">Büyük Yazı</span>
-                            <div className="w-12 h-6 bg-gray-600 rounded-full flex items-center px-1">
-                                <div className="w-4 h-4 bg-white rounded-full"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* About Section - Tap 5 times for admin */}
-                <div className="p-4 border-b border-dark-border">
-                    <div className="flex items-center gap-3 mb-3">
-                        <Info size={20} className="text-primary" />
-                        <h3 className="text-sm font-semibold">Hakkında</h3>
-                    </div>
-                    <div
-                        className="bg-dark-surface rounded-lg p-4 cursor-pointer active:bg-dark-hover transition select-none"
-                        onClick={handleVersionTap}
-                    >
-                        <p className="text-sm text-gray-300 mb-2">GearLink</p>
-                        <p className="text-xs text-gray-500">
-                            Versiyon 1.0.0
-                            {tapCount > 0 && tapCount < 5 && (
-                                <span className="ml-2 text-primary">({tapCount}/5)</span>
-                            )}
-                        </p>
+                {/* Footer / Version */}
+                <div className="p-8 text-center">
+                    <div className="flex flex-col items-center gap-1" onClick={handleVersionTap}>
+                        <p className="text-sm text-gray-500">from</p>
+                        <p className="text-sm font-bold text-white tracking-widest">GEARLINK</p>
+                        <p className="text-xs text-gray-600 mt-4">Versiyon 1.0.0</p>
                     </div>
                 </div>
             </div>
